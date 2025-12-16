@@ -37,6 +37,50 @@ Each function is called with two arguments: (keycode modifiers)."
   :type 'hook
   :group 'ime-hook-mac)
 
+(defconst ime-hook-mac-kVK_ANSI_X 7 "Virtual key code for 'x'.")
+(defconst ime-hook-mac-kVK_ANSI_C 8 "Virtual key code for 'c'.")
+(defconst ime-hook-mac-NSEventModifierFlagControl 262401 "Modifier flag for Control key.")
+
+(defcustom ime-hook-mac-prefix-keys
+  `((,ime-hook-mac-kVK_ANSI_X . ,ime-hook-mac-NSEventModifierFlagControl)
+    (,ime-hook-mac-kVK_ANSI_C . ,ime-hook-mac-NSEventModifierFlagControl))
+  "Alist of prefix keys that trigger IME deactivation.
+Each element is a cons cell (KEYCODE . MODIFIERS).
+If the keycode matches and the specified modifiers are set, IME is deactivated."
+  :type '(alist :key-type integer :value-type integer)
+  :group 'ime-hook-mac)
+
+(defcustom ime-hook-mac-default-input-source nil
+  "Input source ID to switch to when a prefix key is pressed.
+If nil, the first input source containing 'keylayout' in its ID will be used."
+  :type '(choice (const :tag "Auto-detect" nil)
+                 (string :tag "Input Source ID"))
+  :group 'ime-hook-mac)
+
+(defvar ime-hook-mac--default-input-source-cache nil
+  "Cache for the auto-detected default input source.")
+
+(defun ime-hook-mac--get-default-input-source ()
+  "Return the input source ID to use.
+If `ime-hook-mac-default-input-source` is non-nil, return it.
+Otherwise, find the first input source containing 'keylayout' and cache it."
+  (or ime-hook-mac-default-input-source
+      ime-hook-mac--default-input-source-cache
+      (setq ime-hook-mac--default-input-source-cache
+            (cl-loop for source in (ime-hook-mac-get-input-source-list)
+                     if (string-match-p "keylayout" source)
+                     return source))))
+
+(defun ime-hook-mac-deactivate-ime-on-prefix (keycode modifiers)
+  "Deactivate IME when a prefix key defined in `ime-hook-mac-prefix-keys` is pressed.
+This function is intended to be added to `ime-hook-mac-functions`."
+  (cl-loop for (k . m) in ime-hook-mac-prefix-keys
+           if (and (= keycode k)
+                   (= (logand modifiers m) m))
+           return (let ((source (ime-hook-mac--get-default-input-source)))
+                    (when source
+                      (ime-hook-mac-set-input-source source)))))
+
 (defun ime-hook-mac--load-module ()
   "Load the dynamic module if not already loaded."
   (unless (featurep 'ime-hook-module)

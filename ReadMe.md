@@ -32,6 +32,9 @@ make
 
 (add-hook 'ime-hook-mac-functions #'my-ime-hook-handler)
 
+# 
+(add-hook 'ime-hook-mac-functions #'ime-hook-mac-deactivate-ime-on-prefix)
+
 ;; モニターの開始
 (ime-hook-mac-enable)
 
