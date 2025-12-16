@@ -71,15 +71,28 @@ Otherwise, find the first input source containing 'keylayout' and cache it."
                      if (string-match-p "keylayout" source)
                      return source))))
 
+(defvar ime-hook-mac--saved-input-source nil
+  "Saved input source ID to restore.")
+
+(defun ime-hook-mac--restore-input-source ()
+  "Restore the saved input source."
+  (when ime-hook-mac--saved-input-source
+    (ime-hook-mac-set-input-source ime-hook-mac--saved-input-source)
+    (setq ime-hook-mac--saved-input-source nil))
+  (remove-hook 'pre-command-hook #'ime-hook-mac--restore-input-source))
+
 (defun ime-hook-mac-deactivate-ime-on-prefix (keycode modifiers)
   "Deactivate IME when a prefix key defined in `ime-hook-mac-prefix-keys` is pressed.
 This function is intended to be added to `ime-hook-mac-functions`."
   (cl-loop for (k . m) in ime-hook-mac-prefix-keys
            if (and (= keycode k)
                    (= (logand modifiers m) m))
-           return (let ((source (ime-hook-mac--get-default-input-source)))
-                    (when source
-                      (ime-hook-mac-set-input-source source)))))
+           return (let ((source (ime-hook-mac--get-default-input-source))
+                        (current (ime-hook-mac-get-input-source)))
+                    (when (and source current (not (string= source current)))
+                      (setq ime-hook-mac--saved-input-source current)
+                      (ime-hook-mac-set-input-source source)
+                      (add-hook 'pre-command-hook #'ime-hook-mac--restore-input-source)))))
 
 (defun ime-hook-mac--load-module ()
   "Load the dynamic module if not already loaded."
