@@ -20,10 +20,6 @@ macのkey入力をフックしてimeの切り替えを行うemacs拡張機能
 make
 ```
 
-または、Emacs内から以下のコマンドを実行します。
-
-`M-x ime-hook-mac-build-module`
-
 # 設定例
 
 ```elisp

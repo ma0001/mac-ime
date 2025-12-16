@@ -42,7 +42,7 @@ Each function is called with two arguments: (keycode modifiers)."
   (unless (featurep 'ime-hook-module)
     (if (file-exists-p ime-hook-mac-module-path)
         (module-load ime-hook-mac-module-path)
-      (message "ime-hook-mac: Module not found at %s. Please run `ime-hook-mac-build-module`." ime-hook-mac-module-path))))
+      (message "ime-hook-mac: Module not found at %s." ime-hook-mac-module-path))))
 
 (defun ime-hook-mac-handler (keycode modifiers)
   "Internal handler called by the C module.
@@ -54,20 +54,7 @@ Calls functions in `ime-hook-mac-functions`."
   (when (featurep 'ime-hook-module)
     (ime-hook-internal-poll #'ime-hook-mac-handler)))
 
-;;;###autoload
-(defun ime-hook-mac-build-module ()
-  "Build the dynamic module using make."
-  (interactive)
-  (let ((default-directory (file-name-directory (or load-file-name buffer-file-name))))
-    (if (executable-find "make")
-        (progn
-          (message "Building ime-hook-mac module...")
-          (start-process "ime-hook-build" "*ime-hook-build*" "make")
-          (set-process-sentinel (get-process "ime-hook-build")
-                                (lambda (p e)
-                                  (when (equal e "finished\n")
-                                    (message "ime-hook-mac module built successfully.")))))
-      (error "Make not found"))))
+
 
 ;;;###autoload
 (defun ime-hook-mac-enable ()
