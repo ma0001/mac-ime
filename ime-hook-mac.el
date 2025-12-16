@@ -39,11 +39,18 @@ Each function is called with two arguments: (keycode modifiers)."
 
 (defconst ime-hook-mac-kVK_ANSI_X 7 "Virtual key code for 'x'.")
 (defconst ime-hook-mac-kVK_ANSI_C 8 "Virtual key code for 'c'.")
+(defconst ime-hook-mac-kVK_ANSI_H 4 "Virtual key code for 'h'.")
+(defconst ime-hook-mac-kVK_ANSI_G 5 "Virtual key code for 'g'.")
+(defconst ime-hook-mac-kVK_Escape 53 "Virtual key code for 'Escape'.")
 (defconst ime-hook-mac-NSEventModifierFlagControl 262401 "Modifier flag for Control key.")
+(defconst ime-hook-mac-NSEventModifierFlagCmd 1048840 "Modifier flag for Cmd key.")
 
 (defcustom ime-hook-mac-prefix-keys
   `((,ime-hook-mac-kVK_ANSI_X . ,ime-hook-mac-NSEventModifierFlagControl)
-    (,ime-hook-mac-kVK_ANSI_C . ,ime-hook-mac-NSEventModifierFlagControl))
+    (,ime-hook-mac-kVK_ANSI_C . ,ime-hook-mac-NSEventModifierFlagControl)
+    (,ime-hook-mac-kVK_ANSI_H . ,ime-hook-mac-NSEventModifierFlagControl)
+    (,ime-hook-mac-kVK_ANSI_G . ,ime-hook-mac-NSEventModifierFlagCmd)
+    (,ime-hook-mac-kVK_Escape . 0))
   "Alist of prefix keys that trigger IME deactivation.
 Each element is a cons cell (KEYCODE . MODIFIERS).
 If the keycode matches and the specified modifiers are set, IME is deactivated."
