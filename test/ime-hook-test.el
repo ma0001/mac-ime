@@ -21,10 +21,17 @@
   (ime-hook-mac--load-module)
   (should (fboundp 'ime-hook-internal-get-input-source))
   (should (fboundp 'ime-hook-internal-set-input-source))
+  (should (fboundp 'ime-hook-internal-get-input-source-list))
   
-  (let ((current (ime-hook-mac-get-input-source)))
+  (let ((current (ime-hook-mac-get-input-source))
+        (source-list (ime-hook-mac-get-input-source-list)))
     (message "Current Input Source: %s" current)
+    (message "Input Source List: %s" source-list)
+    
     (should (or (stringp current) (null current)))
+    (should (listp source-list))
+    (when source-list
+      (should (cl-every #'stringp source-list)))
     
     (when current
       ;; Try setting it to the same value

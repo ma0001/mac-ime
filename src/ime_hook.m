@@ -155,6 +155,36 @@ static emacs_value Fime_hook_set_input_source(emacs_env *env, ptrdiff_t nargs, e
     return (status == noErr) ? env->intern(env, "t") : env->intern(env, "nil");
 }
 
+// --- Module Function: Get Input Source List ---
+static emacs_value Fime_hook_get_input_source_list(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+    // Filter for selectable input sources (visible in the menu)
+    NSDictionary *filter = @{ (__bridge NSString *)kTISPropertyInputSourceIsSelectCapable : @YES };
+    CFArrayRef sourceList = TISCreateInputSourceList((__bridge CFDictionaryRef)filter, false);
+    
+    if (!sourceList) {
+        return env->intern(env, "nil");
+    }
+
+    CFIndex count = CFArrayGetCount(sourceList);
+    emacs_value result_list = env->intern(env, "nil");
+    emacs_value cons = env->intern(env, "cons");
+
+    // Iterate backwards to build the list in the correct order
+    for (CFIndex i = count - 1; i >= 0; i--) {
+        TISInputSourceRef source = (TISInputSourceRef)CFArrayGetValueAtIndex(sourceList, i);
+        NSString *sourceID = (__bridge NSString *)TISGetInputSourceProperty(source, kTISPropertyInputSourceID);
+        
+        if (sourceID) {
+            emacs_value lispString = env->make_string(env, [sourceID UTF8String], [sourceID lengthOfBytesUsingEncoding:NSUTF8StringEncoding]);
+            emacs_value cons_args[] = { lispString, result_list };
+            result_list = env->funcall(env, cons, 2, cons_args);
+        }
+    }
+    
+    CFRelease(sourceList);
+    return result_list;
+}
+
 // --- Initialization ---
 int emacs_module_init(struct emacs_runtime *ert) {
     emacs_env *env = ert->get_environment(ert);
@@ -162,6 +192,12 @@ int emacs_module_init(struct emacs_runtime *ert) {
     // Define fset helper
     emacs_value fset = env->intern(env, "fset");
     
+    // Register `ime-hook-internal-get-input-source-list`
+    emacs_value func_get_list = env->make_function(env, 0, 0, Fime_hook_get_input_source_list, "Get a list of all selectable input source IDs.", NULL);
+    emacs_value sym_get_list = env->intern(env, "ime-hook-internal-get-input-source-list");
+    emacs_value args_get_list[] = { sym_get_list, func_get_list };
+    env->funcall(env, fset, 2, args_get_list);
+
     // Register `ime-hook-internal-start`
     emacs_value func_start = env->make_function(env, 0, 0, Fime_hook_start, "Start the NSEvent monitor.", NULL);
     emacs_value sym_start = env->intern(env, "ime-hook-internal-start");

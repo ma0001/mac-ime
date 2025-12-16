@@ -46,6 +46,9 @@ make
 (ime-hook-mac-set-input-source "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese");; 現在の入力ソースIDを取得 (例: "com.apple.keylayout.US")
 (ime-hook-mac-get-input-source)
 
+;; 利用可能な入力ソースIDの一覧を取得
+(ime-hook-mac-get-input-source-list)
+
 ;; 入力ソースIDを指定して変更
 (ime-hook-mac-set-input-source "com.apple.keylayout.ABC")
 ```

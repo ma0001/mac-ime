@@ -105,5 +105,12 @@ Calls functions in `ime-hook-mac-functions`."
   (when (featurep 'ime-hook-module)
     (ime-hook-internal-set-input-source source-id)))
 
+;;;###autoload
+(defun ime-hook-mac-get-input-source-list ()
+  "Get a list of all selectable input source IDs."
+  (ime-hook-mac--load-module)
+  (when (featurep 'ime-hook-module)
+    (ime-hook-internal-get-input-source-list)))
+
 (provide 'ime-hook-mac)
 ;;; ime-hook-mac.el ends here
