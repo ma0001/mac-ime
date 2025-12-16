@@ -91,5 +91,19 @@ Calls functions in `ime-hook-mac-functions`."
     (ime-hook-internal-stop)
     (message "ime-hook-mac disabled.")))
 
+;;;###autoload
+(defun ime-hook-mac-get-input-source ()
+  "Get the current input source ID."
+  (ime-hook-mac--load-module)
+  (when (featurep 'ime-hook-module)
+    (ime-hook-internal-get-input-source)))
+
+;;;###autoload
+(defun ime-hook-mac-set-input-source (source-id)
+  "Set the current input source to SOURCE-ID."
+  (ime-hook-mac--load-module)
+  (when (featurep 'ime-hook-module)
+    (ime-hook-internal-set-input-source source-id)))
+
 (provide 'ime-hook-mac)
 ;;; ime-hook-mac.el ends here

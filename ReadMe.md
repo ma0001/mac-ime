@@ -38,4 +38,14 @@ make
 
 ;; モニターの開始
 (ime-hook-mac-enable)
+
+;; 現在の入力ソースIDを取得 (例: "com.apple.keylayout.US")
+(ime-hook-mac-get-input-source)
+
+;; 入力ソースIDを指定して変更
+(ime-hook-mac-set-input-source "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese");; 現在の入力ソースIDを取得 (例: "com.apple.keylayout.US")
+(ime-hook-mac-get-input-source)
+
+;; 入力ソースIDを指定して変更
+(ime-hook-mac-set-input-source "com.apple.keylayout.ABC")
 ```

@@ -15,3 +15,17 @@
   (ime-hook-mac--load-module)
   (should (equal (ime-hook-internal-start) t))
   (should (equal (ime-hook-internal-stop) t)))
+
+(ert-deftest ime-hook-input-source-test ()
+  "Test getting and setting input source."
+  (ime-hook-mac--load-module)
+  (should (fboundp 'ime-hook-internal-get-input-source))
+  (should (fboundp 'ime-hook-internal-set-input-source))
+  
+  (let ((current (ime-hook-mac-get-input-source)))
+    (message "Current Input Source: %s" current)
+    (should (or (stringp current) (null current)))
+    
+    (when current
+      ;; Try setting it to the same value
+      (should (ime-hook-mac-set-input-source current)))))
