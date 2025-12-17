@@ -134,6 +134,7 @@ Calls functions in `ime-hook-mac-functions`."
     (ime-hook-internal-start)
     (unless ime-hook-mac-timer
       (setq ime-hook-mac-timer (run-with-timer 0 ime-hook-mac-poll-interval #'ime-hook-mac-poll))
+      (add-hook 'ime-hook-mac-functions #'ime-hook-mac-deactivate-ime-on-prefix)
       (dolist (func ime-hook-mac-auto-deactivate-functions)
         (ime-hook-mac-auto-deactivate func))
       (message "ime-hook-mac enabled."))))
@@ -146,6 +147,7 @@ Calls functions in `ime-hook-mac-functions`."
     (cancel-timer ime-hook-mac-timer)
     (setq ime-hook-mac-timer nil))
   (when (featurep 'ime-hook-module)
+    (remove-hook 'ime-hook-mac-functions #'ime-hook-mac-deactivate-ime-on-prefix)
     (ime-hook-internal-stop)
     (dolist (func ime-hook-mac-auto-deactivate-functions)
       (advice-remove func #'ime-hook-mac--auto-deactivate-advice))
