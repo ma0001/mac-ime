@@ -57,23 +57,23 @@ If the keycode matches and the specified modifiers are set, IME is deactivated."
   :type '(alist :key-type integer :value-type integer)
   :group 'ime-hook-mac)
 
-(defcustom ime-hook-mac-default-input-source nil
-  "Input source ID to switch to when a prefix key is pressed.
+(defcustom ime-hook-mac-ime-off-input-source nil
+  "Input source ID to switch to when a prefix key is pressed (to turn off IME).
 If nil, the first input source containing 'keylayout' in its ID will be used."
   :type '(choice (const :tag "Auto-detect" nil)
                  (string :tag "Input Source ID"))
   :group 'ime-hook-mac)
 
-(defvar ime-hook-mac--default-input-source-cache nil
-  "Cache for the auto-detected default input source.")
+(defvar ime-hook-mac--ime-off-input-source-cache nil
+  "Cache for the auto-detected IME off input source.")
 
-(defun ime-hook-mac--get-default-input-source ()
-  "Return the input source ID to use.
-If `ime-hook-mac-default-input-source` is non-nil, return it.
+(defun ime-hook-mac--get-ime-off-input-source ()
+  "Return the input source ID to use to turn off IME.
+If `ime-hook-mac-ime-off-input-source` is non-nil, return it.
 Otherwise, find the first input source containing 'keylayout' and cache it."
-  (or ime-hook-mac-default-input-source
-      ime-hook-mac--default-input-source-cache
-      (setq ime-hook-mac--default-input-source-cache
+  (or ime-hook-mac-ime-off-input-source
+      ime-hook-mac--ime-off-input-source-cache
+      (setq ime-hook-mac--ime-off-input-source-cache
             (cl-loop for source in (ime-hook-mac-get-input-source-list)
                      if (string-match-p "keylayout" source)
                      return source))))
@@ -94,7 +94,7 @@ This function is intended to be added to `ime-hook-mac-functions`."
   (cl-loop for (k . m) in ime-hook-mac-prefix-keys
            if (and (= keycode k)
                    (= (logand modifiers m) m))
-           return (let ((source (ime-hook-mac--get-default-input-source))
+           return (let ((source (ime-hook-mac--get-ime-off-input-source))
                         (current (ime-hook-mac-get-input-source)))
                     (when (and source current (not (string= source current)))
                       (setq ime-hook-mac--saved-input-source current)
