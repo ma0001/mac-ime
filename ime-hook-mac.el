@@ -118,10 +118,28 @@ This function is intended to be added to `ime-hook-mac-functions`."
 Calls functions in `ime-hook-mac-functions`."
   (run-hook-with-args 'ime-hook-mac-functions keycode modifiers))
 
+(defvar ime-hook-mac-last-input-source nil
+  "The last used input source ID that contains 'inputmethod'.")
+
+(defvar ime-hook-mac--current-input-source nil
+  "Cache of the current input source ID.")
+
+(defun ime-hook-mac--check-input-source-change ()
+  "Check if input source has changed and update `ime-hook-mac-last-input-source`.
+Only input sources containing 'inputmethod' are saved."
+  (let ((current (ime-hook-mac-get-input-source)))
+    (when (and current
+               ime-hook-mac--current-input-source
+               (not (string= current ime-hook-mac--current-input-source)))
+      (when (string-match-p "inputmethod" ime-hook-mac--current-input-source)
+        (setq ime-hook-mac-last-input-source ime-hook-mac--current-input-source)))
+    (setq ime-hook-mac--current-input-source current)))
+
 (defun ime-hook-mac-poll ()
   "Poll the C module for events."
   (when (featurep 'ime-hook-module)
-    (ime-hook-internal-poll #'ime-hook-mac-handler)))
+    (ime-hook-internal-poll #'ime-hook-mac-handler)
+    (ime-hook-mac--check-input-source-change)))
 
 
 
@@ -192,5 +210,18 @@ Calls functions in `ime-hook-mac-functions`."
 The IME state is restored after FUNC completes."
   (advice-add func :around #'ime-hook-mac--auto-deactivate-advice))
 
+;;;###autoload
+(defun ime-hook-mac-activate-ime ()
+  "Activate the last used IME input source.
+If `ime-hook-mac-last-input-source` is nil, use the first available
+input source containing 'inputmethod'."
+  (interactive)
+  (let ((source (or ime-hook-mac-last-input-source
+                    (cl-loop for s in (ime-hook-mac-get-input-source-list)
+                             if (string-match-p "inputmethod" s)
+                             return s))))
+    (when source
+      (ime-hook-mac-set-input-source source))))
+      
 (provide 'ime-hook-mac)
 ;;; ime-hook-mac.el ends here
