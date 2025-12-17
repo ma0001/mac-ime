@@ -64,6 +64,11 @@ If nil, the first input source containing 'keylayout' in its ID will be used."
                  (string :tag "Input Source ID"))
   :group 'ime-hook-mac)
 
+(defcustom ime-hook-mac-auto-deactivate-functions '(universal-argument read-string read-char read-from-minibuffer y-or-n-p yes-or-no-p map-y-or-n-p)
+  "List of functions to automatically deactivate IME during execution."
+  :type '(repeat function)
+  :group 'ime-hook-mac)
+
 (defvar ime-hook-mac--ime-off-input-source-cache nil
   "Cache for the auto-detected IME off input source.")
 
@@ -129,6 +134,8 @@ Calls functions in `ime-hook-mac-functions`."
     (ime-hook-internal-start)
     (unless ime-hook-mac-timer
       (setq ime-hook-mac-timer (run-with-timer 0 ime-hook-mac-poll-interval #'ime-hook-mac-poll))
+      (dolist (func ime-hook-mac-auto-deactivate-functions)
+        (ime-hook-mac-auto-deactivate func))
       (message "ime-hook-mac enabled."))))
 
 ;;;###autoload
@@ -140,6 +147,8 @@ Calls functions in `ime-hook-mac-functions`."
     (setq ime-hook-mac-timer nil))
   (when (featurep 'ime-hook-module)
     (ime-hook-internal-stop)
+    (dolist (func ime-hook-mac-auto-deactivate-functions)
+      (advice-remove func #'ime-hook-mac--auto-deactivate-advice))
     (message "ime-hook-mac disabled.")))
 
 ;;;###autoload
@@ -162,6 +171,24 @@ Calls functions in `ime-hook-mac-functions`."
   (ime-hook-mac--load-module)
   (when (featurep 'ime-hook-module)
     (ime-hook-internal-get-input-source-list)))
+
+(defun ime-hook-mac--auto-deactivate-advice (orig-fun &rest args)
+  "Advice to deactivate IME before ORIG-FUN and restore it afterwards."
+  (let ((saved-source (ime-hook-mac-get-input-source))
+        (off-source (ime-hook-mac--get-ime-off-input-source)))
+    (if (and off-source saved-source (not (string= off-source saved-source)))
+        (progn
+          (ime-hook-mac-set-input-source off-source)
+          (unwind-protect
+              (apply orig-fun args)
+            (ime-hook-mac-set-input-source saved-source)))
+      (apply orig-fun args))))
+
+;;;###autoload
+(defun ime-hook-mac-auto-deactivate (func)
+  "Add advice to FUNC to deactivate IME during its execution.
+The IME state is restored after FUNC completes."
+  (advice-add func :around #'ime-hook-mac--auto-deactivate-advice))
 
 (provide 'ime-hook-mac)
 ;;; ime-hook-mac.el ends here
