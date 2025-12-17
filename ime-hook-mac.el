@@ -231,6 +231,15 @@ If that is also nil, use the first available input source containing 'inputmetho
                              return s))))
     (when source
       (ime-hook-mac-set-input-source source))))
+
+;;;###autoload
+(defun ime-hook-mac-deactivate-ime ()
+  "Deactivate the IME input source.
+Uses `ime-hook-mac--get-ime-off-input-source` to determine the input source."
+  (interactive)
+  (let ((source (ime-hook-mac--get-ime-off-input-source)))
+    (when source
+      (ime-hook-mac-set-input-source source))))
       
 (provide 'ime-hook-mac)
 ;;; ime-hook-mac.el ends here
