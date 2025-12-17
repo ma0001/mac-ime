@@ -59,14 +59,14 @@ If the keycode matches and the specified modifiers are set, IME is deactivated."
 
 (defcustom ime-hook-mac-ime-off-input-source nil
   "Input source ID to switch to when a prefix key is pressed (to turn off IME).
-If nil, the first input source containing 'keylayout' in its ID will be used."
+If nil, `ime-hook-mac-last-off-input-source` or the first input source containing 'keylayout' in its ID will be used."
   :type '(choice (const :tag "Auto-detect" nil)
                  (string :tag "Input Source ID"))
   :group 'ime-hook-mac)
 
 (defcustom ime-hook-mac-ime-on-input-source nil
   "Input source ID to switch to when activating IME.
-If nil, `ime-hook-mac-last-input-source` or the first input source containing 'inputmethod' will be used."
+If nil, `ime-hook-mac-last-on-input-source` or the first input source containing 'inputmethod' will be used."
   :type '(choice (const :tag "Auto-detect" nil)
                  (string :tag "Input Source ID"))
   :group 'ime-hook-mac)
@@ -76,18 +76,28 @@ If nil, `ime-hook-mac-last-input-source` or the first input source containing 'i
   :type '(repeat function)
   :group 'ime-hook-mac)
 
-(defvar ime-hook-mac--ime-off-input-source-cache nil
-  "Cache for the auto-detected IME off input source.")
-
 (defun ime-hook-mac--get-ime-off-input-source ()
   "Return the input source ID to use to turn off IME.
 If `ime-hook-mac-ime-off-input-source` is non-nil, return it.
-Otherwise, find the first input source containing 'keylayout' and cache it."
+Otherwise, use `ime-hook-mac-last-off-input-source`.
+If that is also nil, find the first input source containing 'keylayout' and cache it."
   (or ime-hook-mac-ime-off-input-source
-      ime-hook-mac--ime-off-input-source-cache
-      (setq ime-hook-mac--ime-off-input-source-cache
+      ime-hook-mac-last-off-input-source
+      (setq ime-hook-mac-last-off-input-source
             (cl-loop for source in (ime-hook-mac-get-input-source-list)
                      if (string-match-p "keylayout" source)
+                     return source))))
+
+(defun ime-hook-mac--get-ime-on-input-source ()
+  "Return the input source ID to use to turn on IME.
+If `ime-hook-mac-ime-on-input-source` is non-nil, return it.
+Otherwise, use `ime-hook-mac-last-on-input-source`.
+If that is also nil, find the first input source containing 'inputmethod' and cache it."
+  (or ime-hook-mac-ime-on-input-source
+      ime-hook-mac-last-on-input-source
+      (setq ime-hook-mac-last-on-input-source
+            (cl-loop for source in (ime-hook-mac-get-input-source-list)
+                     if (string-match-p "inputmethod" source)
                      return source))))
 
 (defvar ime-hook-mac--saved-input-source nil
@@ -125,21 +135,27 @@ This function is intended to be added to `ime-hook-mac-functions`."
 Calls functions in `ime-hook-mac-functions`."
   (run-hook-with-args 'ime-hook-mac-functions keycode modifiers))
 
-(defvar ime-hook-mac-last-input-source nil
+(defvar ime-hook-mac-last-on-input-source nil
   "The last used input source ID that contains 'inputmethod'.")
+
+(defvar ime-hook-mac-last-off-input-source nil
+  "The last used input source ID that contains 'keylayout'.")
 
 (defvar ime-hook-mac--current-input-source nil
   "Cache of the current input source ID.")
 
 (defun ime-hook-mac--check-input-source-change ()
-  "Check if input source has changed and update `ime-hook-mac-last-input-source`.
-Only input sources containing 'inputmethod' are saved."
+  "Check if input source has changed and update `ime-hook-mac-last-on-input-source` and `ime-hook-mac-last-off-input-source`.
+Only input sources containing 'inputmethod' are saved to on-source, and 'keylayout' to off-source."
   (let ((current (ime-hook-mac-get-input-source)))
     (when (and current
                ime-hook-mac--current-input-source
                (not (string= current ime-hook-mac--current-input-source)))
-      (when (string-match-p "inputmethod" ime-hook-mac--current-input-source)
-        (setq ime-hook-mac-last-input-source ime-hook-mac--current-input-source)))
+      (cond
+       ((string-match-p "inputmethod" ime-hook-mac--current-input-source)
+        (setq ime-hook-mac-last-on-input-source ime-hook-mac--current-input-source))
+       ((string-match-p "keylayout" ime-hook-mac--current-input-source)
+        (setq ime-hook-mac-last-off-input-source ime-hook-mac--current-input-source))))
     (setq ime-hook-mac--current-input-source current)))
 
 (defun ime-hook-mac-poll ()
@@ -220,15 +236,9 @@ The IME state is restored after FUNC completes."
 ;;;###autoload
 (defun ime-hook-mac-activate-ime ()
   "Activate the IME input source.
-If `ime-hook-mac-ime-on-input-source` is non-nil, use it.
-Otherwise, use `ime-hook-mac-last-input-source`.
-If that is also nil, use the first available input source containing 'inputmethod'."
+Uses `ime-hook-mac--get-ime-on-input-source` to determine the input source."
   (interactive)
-  (let ((source (or ime-hook-mac-ime-on-input-source
-                    ime-hook-mac-last-input-source
-                    (cl-loop for s in (ime-hook-mac-get-input-source-list)
-                             if (string-match-p "inputmethod" s)
-                             return s))))
+  (let ((source (ime-hook-mac--get-ime-on-input-source)))
     (when source
       (ime-hook-mac-set-input-source source))))
 
