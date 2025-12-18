@@ -23,31 +23,31 @@ make
 # 設定例
 
 ```elisp
-(add-to-list 'load-path "/path/to/ime-hook-mac")
-(require 'ime-hook-mac)
+(add-to-list 'load-path "/path/to/mac-ime")
+(require 'mac-ime)
 
 ;; フック関数の定義
 (defun my-ime-hook-handler (keycode modifiers)
   (message "Key: %d, Modifiers: %d" keycode modifiers))
 
-(add-hook 'ime-hook-mac-functions #'my-ime-hook-handler)
+(add-hook 'mac-ime-functions #'my-ime-hook-handler)
 
 # 
-(add-hook 'ime-hook-mac-functions #'ime-hook-mac-deactivate-ime-on-prefix)
+(add-hook 'mac-ime-functions #'mac-ime-deactivate-ime-on-prefix)
 
 ;; モニターの開始
-(ime-hook-mac-enable)
+(mac-ime-enable)
 
 ;; 現在の入力ソースIDを取得 (例: "com.apple.keylayout.US")
-(ime-hook-mac-get-input-source)
+(mac-ime-get-input-source)
 
 ;; 入力ソースIDを指定して変更
-(ime-hook-mac-set-input-source "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese");; 現在の入力ソースIDを取得 (例: "com.apple.keylayout.US")
-(ime-hook-mac-get-input-source)
+(mac-ime-set-input-source "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese");; 現在の入力ソースIDを取得 (例: "com.apple.keylayout.US")
+(mac-ime-get-input-source)
 
 ;; 利用可能な入力ソースIDの一覧を取得
-(ime-hook-mac-get-input-source-list)
+(mac-ime-get-input-source-list)
 
 ;; 入力ソースIDを指定して変更
-(ime-hook-mac-set-input-source "com.apple.keylayout.ABC")
+(mac-ime-set-input-source "com.apple.keylayout.ABC")
 ```
