@@ -18,6 +18,9 @@
 
 (require 'cl-lib)
 
+(defconst mac-ime-input-method "mac-ime"
+  "Name of the mac-ime input method.")
+
 (defvar mac-ime-module-file "mac-ime-module.so"
   "Name of the dynamic module file.")
 
@@ -113,7 +116,8 @@ If that is also nil, find the first input source containing 'inputmethod' and ca
 (defun mac-ime-deactivate-ime-on-prefix (keycode modifiers)
   "Deactivate IME when a prefix key defined in `mac-ime-prefix-keys` is pressed.
 This function is intended to be added to `mac-ime-functions`."
-  (unless mac-ime--saved-input-source
+  (when (and (not mac-ime--saved-input-source)
+             (equal current-input-method mac-ime-input-method))
     (cl-loop for (k . m) in mac-ime-prefix-keys
              if (and (= keycode k)
                      (= (logand modifiers m) m))
@@ -166,7 +170,20 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
   (when (featurep 'mac-ime-module)
     (mac-ime-internal-poll #'mac-ime-handler)))
 
+(defun mac-ime-activate-input-method (_input-method)
+  "Activate the mac-ime input method."
+  (mac-ime-activate-ime)
+  (setq deactivate-current-input-method-function #'mac-ime-deactivate-ime))
 
+(register-input-method mac-ime-input-method "Japanese" 'mac-ime-activate-input-method "[こ]" "macOS System IME")
+
+(defun mac-ime-update-state (&optional _window)
+  "Update IME state based on the current input method.
+If `current-input-method` is `mac-ime-input-method`, activate IME.
+Otherwise, deactivate IME."
+  (if (equal current-input-method mac-ime-input-method)
+      (mac-ime-activate-ime)
+    (mac-ime-deactivate-ime)))
 
 ;;;###autoload
 (defun mac-ime-enable ()
@@ -180,6 +197,7 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
       (add-hook 'mac-ime-functions #'mac-ime-deactivate-ime-on-prefix)
       (dolist (func mac-ime-auto-deactivate-functions)
         (mac-ime-auto-deactivate func))
+      (add-hook 'window-selection-change-functions #'mac-ime-update-state)
       (message "mac-ime enabled."))))
 
 ;;;###autoload
@@ -194,6 +212,7 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
     (mac-ime-internal-stop)
     (dolist (func mac-ime-auto-deactivate-functions)
       (advice-remove func #'mac-ime--auto-deactivate-advice))
+    (remove-hook 'window-selection-change-functions #'mac-ime-update-state)
     (message "mac-ime disabled.")))
 
 ;;;###autoload
@@ -219,15 +238,16 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
 
 (defun mac-ime--auto-deactivate-advice (orig-fun &rest args)
   "Advice to deactivate IME before ORIG-FUN and restore it afterwards."
-  (let ((saved-source (mac-ime-get-input-source))
-        (off-source (mac-ime--get-ime-off-input-source)))
-    (if (and off-source saved-source (not (string= off-source saved-source)))
-        (progn
-          (mac-ime-set-input-source off-source)
-          (unwind-protect
-              (apply orig-fun args)
-            (mac-ime-set-input-source saved-source)))
-      (apply orig-fun args))))
+    (let ((saved-source (mac-ime-get-input-source))
+          (off-source (mac-ime--get-ime-off-input-source)))
+      (if (and (equal current-input-method mac-ime-input-method)
+               off-source saved-source (not (string= off-source saved-source)))
+          (progn
+            (mac-ime-set-input-source off-source)
+            (unwind-protect
+                (apply orig-fun args)
+              (mac-ime-set-input-source saved-source)))
+        (apply orig-fun args))))
 
 ;;;###autoload
 (defun mac-ime-auto-deactivate (func)
