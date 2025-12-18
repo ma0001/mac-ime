@@ -133,7 +133,9 @@ This function is intended to be added to `mac-ime-functions`."
 (defun mac-ime-handler (keycode modifiers)
   "Internal handler called by the C module.
 Calls functions in `mac-ime-functions`."
-  (run-hook-with-args 'mac-ime-functions keycode modifiers))
+  (run-hook-with-args 'mac-ime-functions keycode modifiers)
+  (mac-ime--check-input-source-change))
+  
 
 (defvar mac-ime-last-on-input-source nil
   "The last used input source ID that contains 'inputmethod'.")
@@ -161,8 +163,7 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
 (defun mac-ime-poll ()
   "Poll the C module for events."
   (when (featurep 'mac-ime-module)
-    (mac-ime-internal-poll #'mac-ime-handler)
-    (mac-ime--check-input-source-change)))
+    (mac-ime-internal-poll #'mac-ime-handler)))
 
 
 
