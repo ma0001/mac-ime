@@ -27,10 +27,10 @@ make
 (require 'mac-ime)
 
 ;; フック関数の定義
-(defun my-ime-hook-handler (keycode modifiers)
+(defun my-mac-ime-handler (keycode modifiers)
   (message "Key: %d, Modifiers: %d" keycode modifiers))
 
-(add-hook 'mac-ime-functions #'my-ime-hook-handler)
+(add-hook 'mac-ime-functions #'my-mac-ime-handler)
 
 # 
 (add-hook 'mac-ime-functions #'mac-ime-deactivate-ime-on-prefix)

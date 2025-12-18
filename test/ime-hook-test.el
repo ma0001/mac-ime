@@ -1,27 +1,27 @@
 (require 'ert)
 (require 'mac-ime)
 
-(ert-deftest ime-hook-load-test ()
+(ert-deftest mac-ime-load-test ()
   "Test that the module loads and functions are defined."
   (mac-ime--load-module)
   (should (featurep 'mac-ime))
-  (should (featurep 'ime-hook-module))
-  (should (fboundp 'ime-hook-internal-start))
-  (should (fboundp 'ime-hook-internal-stop))
-  (should (fboundp 'ime-hook-internal-poll)))
+  (should (featurep 'mac-ime-module))
+  (should (fboundp 'mac-ime-internal-start))
+  (should (fboundp 'mac-ime-internal-stop))
+  (should (fboundp 'mac-ime-internal-poll)))
 
-(ert-deftest ime-hook-start-stop-test ()
+(ert-deftest mac-ime-start-stop-test ()
   "Test starting and stopping the monitor."
   (mac-ime--load-module)
-  (should (equal (ime-hook-internal-start) t))
-  (should (equal (ime-hook-internal-stop) t)))
+  (should (equal (mac-ime-internal-start) t))
+  (should (equal (mac-ime-internal-stop) t)))
 
-(ert-deftest ime-hook-input-source-test ()
+(ert-deftest mac-ime-input-source-test ()
   "Test getting and setting input source."
   (mac-ime--load-module)
-  (should (fboundp 'ime-hook-internal-get-input-source))
-  (should (fboundp 'ime-hook-internal-set-input-source))
-  (should (fboundp 'ime-hook-internal-get-input-source-list))
+  (should (fboundp 'mac-ime-internal-get-input-source))
+  (should (fboundp 'mac-ime-internal-set-input-source))
+  (should (fboundp 'mac-ime-internal-get-input-source-list))
   
   (let ((current (mac-ime-get-input-source))
         (source-list (mac-ime-get-input-source-list)))

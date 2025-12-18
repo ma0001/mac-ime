@@ -18,7 +18,7 @@
 
 (require 'cl-lib)
 
-(defvar mac-ime-module-file "ime-hook-module.so"
+(defvar mac-ime-module-file "mac-ime-module.so"
   "Name of the dynamic module file.")
 
 (defvar mac-ime-module-path
@@ -125,7 +125,7 @@ This function is intended to be added to `mac-ime-functions`."
 
 (defun mac-ime--load-module ()
   "Load the dynamic module if not already loaded."
-  (unless (featurep 'ime-hook-module)
+  (unless (featurep 'mac-ime-module)
     (if (file-exists-p mac-ime-module-path)
         (module-load mac-ime-module-path)
       (message "mac-ime: Module not found at %s." mac-ime-module-path))))
@@ -160,8 +160,8 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
 
 (defun mac-ime-poll ()
   "Poll the C module for events."
-  (when (featurep 'ime-hook-module)
-    (ime-hook-internal-poll #'mac-ime-handler)
+  (when (featurep 'mac-ime-module)
+    (mac-ime-internal-poll #'mac-ime-handler)
     (mac-ime--check-input-source-change)))
 
 
@@ -171,8 +171,8 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
   "Enable the global key monitor."
   (interactive)
   (mac-ime--load-module)
-  (when (featurep 'ime-hook-module)
-    (ime-hook-internal-start)
+  (when (featurep 'mac-ime-module)
+    (mac-ime-internal-start)
     (unless mac-ime-timer
       (setq mac-ime-timer (run-with-timer 0 mac-ime-poll-interval #'mac-ime-poll))
       (add-hook 'mac-ime-functions #'mac-ime-deactivate-ime-on-prefix)
@@ -187,9 +187,9 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
   (when mac-ime-timer
     (cancel-timer mac-ime-timer)
     (setq mac-ime-timer nil))
-  (when (featurep 'ime-hook-module)
+  (when (featurep 'mac-ime-module)
     (remove-hook 'mac-ime-functions #'mac-ime-deactivate-ime-on-prefix)
-    (ime-hook-internal-stop)
+    (mac-ime-internal-stop)
     (dolist (func mac-ime-auto-deactivate-functions)
       (advice-remove func #'mac-ime--auto-deactivate-advice))
     (message "mac-ime disabled.")))
@@ -198,22 +198,22 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
 (defun mac-ime-get-input-source ()
   "Get the current input source ID."
   (mac-ime--load-module)
-  (when (featurep 'ime-hook-module)
-    (ime-hook-internal-get-input-source)))
+  (when (featurep 'mac-ime-module)
+    (mac-ime-internal-get-input-source)))
 
 ;;;###autoload
 (defun mac-ime-set-input-source (source-id)
   "Set the current input source to SOURCE-ID."
   (mac-ime--load-module)
-  (when (featurep 'ime-hook-module)
-    (ime-hook-internal-set-input-source source-id)))
+  (when (featurep 'mac-ime-module)
+    (mac-ime-internal-set-input-source source-id)))
 
 ;;;###autoload
 (defun mac-ime-get-input-source-list ()
   "Get a list of all selectable input source IDs."
   (mac-ime--load-module)
-  (when (featurep 'ime-hook-module)
-    (ime-hook-internal-get-input-source-list)))
+  (when (featurep 'mac-ime-module)
+    (mac-ime-internal-get-input-source-list)))
 
 (defun mac-ime--auto-deactivate-advice (orig-fun &rest args)
   "Advice to deactivate IME before ORIG-FUN and restore it afterwards."

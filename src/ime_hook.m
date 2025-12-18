@@ -26,7 +26,7 @@ void enqueue_event_data(long keyCode, unsigned long modifierFlags) {
 }
 
 // --- Module Function: Start Monitor ---
-static emacs_value Fime_hook_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+static emacs_value Fmac_ime_start(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
     if (eventMonitor) return env->intern(env, "nil"); // Already running
 
     // Initialize mutex and queue
@@ -55,7 +55,7 @@ static emacs_value Fime_hook_start(emacs_env *env, ptrdiff_t nargs, emacs_value 
 }
 
 // --- Module Function: Stop Monitor ---
-static emacs_value Fime_hook_stop(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+static emacs_value Fmac_ime_stop(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
     if (eventMonitor) {
         [NSEvent removeMonitor:eventMonitor];
         eventMonitor = nil;
@@ -66,7 +66,7 @@ static emacs_value Fime_hook_stop(emacs_env *env, ptrdiff_t nargs, emacs_value a
 
 // --- Module Function: Poll Events ---
 // Lisp calls this function. We now have a valid `env`.
-static emacs_value Fime_hook_poll(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+static emacs_value Fmac_ime_poll(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
     // args[0] should be the hook function to call
     if (nargs < 1) return env->intern(env, "nil");
     emacs_value hook_func = args[0];
@@ -98,7 +98,7 @@ static emacs_value Fime_hook_poll(emacs_env *env, ptrdiff_t nargs, emacs_value a
 }
 
 // --- Module Function: Get Input Source ---
-static emacs_value Fime_hook_get_input_source(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+static emacs_value Fmac_ime_get_input_source(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
     TISInputSourceRef currentSource = TISCopyCurrentKeyboardInputSource();
     if (!currentSource) {
         return env->intern(env, "nil");
@@ -122,7 +122,7 @@ static emacs_value Fime_hook_get_input_source(emacs_env *env, ptrdiff_t nargs, e
 }
 
 // --- Module Function: Set Input Source ---
-static emacs_value Fime_hook_set_input_source(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+static emacs_value Fmac_ime_set_input_source(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
     if (nargs < 1) return env->intern(env, "nil");
     
     ptrdiff_t len;
@@ -156,7 +156,7 @@ static emacs_value Fime_hook_set_input_source(emacs_env *env, ptrdiff_t nargs, e
 }
 
 // --- Module Function: Get Input Source List ---
-static emacs_value Fime_hook_get_input_source_list(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
+static emacs_value Fmac_ime_get_input_source_list(emacs_env *env, ptrdiff_t nargs, emacs_value args[], void *data) {
     // Filter for selectable input sources (visible in the menu)
     NSDictionary *filter = @{ (__bridge NSString *)kTISPropertyInputSourceIsSelectCapable : @YES };
     CFArrayRef sourceList = TISCreateInputSourceList((__bridge CFDictionaryRef)filter, false);
@@ -192,45 +192,45 @@ int emacs_module_init(struct emacs_runtime *ert) {
     // Define fset helper
     emacs_value fset = env->intern(env, "fset");
     
-    // Register `ime-hook-internal-get-input-source-list`
-    emacs_value func_get_list = env->make_function(env, 0, 0, Fime_hook_get_input_source_list, "Get a list of all selectable input source IDs.", NULL);
-    emacs_value sym_get_list = env->intern(env, "ime-hook-internal-get-input-source-list");
+    // Register `mac-ime-internal-get-input-source-list`
+    emacs_value func_get_list = env->make_function(env, 0, 0, Fmac_ime_get_input_source_list, "Get a list of all selectable input source IDs.", NULL);
+    emacs_value sym_get_list = env->intern(env, "mac-ime-internal-get-input-source-list");
     emacs_value args_get_list[] = { sym_get_list, func_get_list };
     env->funcall(env, fset, 2, args_get_list);
 
-    // Register `ime-hook-internal-start`
-    emacs_value func_start = env->make_function(env, 0, 0, Fime_hook_start, "Start the NSEvent monitor.", NULL);
-    emacs_value sym_start = env->intern(env, "ime-hook-internal-start");
+    // Register `mac-ime-internal-start`
+    emacs_value func_start = env->make_function(env, 0, 0, Fmac_ime_start, "Start the NSEvent monitor.", NULL);
+    emacs_value sym_start = env->intern(env, "mac-ime-internal-start");
     emacs_value args_start[] = { sym_start, func_start };
     env->funcall(env, fset, 2, args_start);
 
-    // Register `ime-hook-internal-stop`
-    emacs_value func_stop = env->make_function(env, 0, 0, Fime_hook_stop, "Stop the NSEvent monitor.", NULL);
-    emacs_value sym_stop = env->intern(env, "ime-hook-internal-stop");
+    // Register `mac-ime-internal-stop`
+    emacs_value func_stop = env->make_function(env, 0, 0, Fmac_ime_stop, "Stop the NSEvent monitor.", NULL);
+    emacs_value sym_stop = env->intern(env, "mac-ime-internal-stop");
     emacs_value args_stop[] = { sym_stop, func_stop };
     env->funcall(env, fset, 2, args_stop);
 
-    // Register `ime-hook-internal-poll`
-    emacs_value func_poll = env->make_function(env, 1, 1, Fime_hook_poll, "Poll queued events and call HOOK-FUNC.", NULL);
-    emacs_value sym_poll = env->intern(env, "ime-hook-internal-poll");
+    // Register `mac-ime-internal-poll`
+    emacs_value func_poll = env->make_function(env, 1, 1, Fmac_ime_poll, "Poll queued events and call HOOK-FUNC.", NULL);
+    emacs_value sym_poll = env->intern(env, "mac-ime-internal-poll");
     emacs_value args_poll[] = { sym_poll, func_poll };
     env->funcall(env, fset, 2, args_poll);
 
-    // Register `ime-hook-internal-get-input-source`
-    emacs_value func_get_source = env->make_function(env, 0, 0, Fime_hook_get_input_source, "Get the current input source ID.", NULL);
-    emacs_value sym_get_source = env->intern(env, "ime-hook-internal-get-input-source");
+    // Register `mac-ime-internal-get-input-source`
+    emacs_value func_get_source = env->make_function(env, 0, 0, Fmac_ime_get_input_source, "Get the current input source ID.", NULL);
+    emacs_value sym_get_source = env->intern(env, "mac-ime-internal-get-input-source");
     emacs_value args_get_source[] = { sym_get_source, func_get_source };
     env->funcall(env, fset, 2, args_get_source);
 
-    // Register `ime-hook-internal-set-input-source`
-    emacs_value func_set_source = env->make_function(env, 1, 1, Fime_hook_set_input_source, "Set the current input source by ID.", NULL);
-    emacs_value sym_set_source = env->intern(env, "ime-hook-internal-set-input-source");
+    // Register `mac-ime-internal-set-input-source`
+    emacs_value func_set_source = env->make_function(env, 1, 1, Fmac_ime_set_input_source, "Set the current input source by ID.", NULL);
+    emacs_value sym_set_source = env->intern(env, "mac-ime-internal-set-input-source");
     emacs_value args_set_source[] = { sym_set_source, func_set_source };
     env->funcall(env, fset, 2, args_set_source);
 
     // Provide the feature
     emacs_value provide = env->intern(env, "provide");
-    emacs_value feature = env->intern(env, "ime-hook-module");
+    emacs_value feature = env->intern(env, "mac-ime-module");
     emacs_value provide_args[] = { feature };
     env->funcall(env, provide, 1, provide_args);
 
