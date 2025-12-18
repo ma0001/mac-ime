@@ -113,15 +113,16 @@ If that is also nil, find the first input source containing 'inputmethod' and ca
 (defun mac-ime-deactivate-ime-on-prefix (keycode modifiers)
   "Deactivate IME when a prefix key defined in `mac-ime-prefix-keys` is pressed.
 This function is intended to be added to `mac-ime-functions`."
-  (cl-loop for (k . m) in mac-ime-prefix-keys
-           if (and (= keycode k)
-                   (= (logand modifiers m) m))
-           return (let ((source (mac-ime--get-ime-off-input-source))
-                        (current (mac-ime-get-input-source)))
-                    (when (and source current (not (string= source current)))
-                      (setq mac-ime--saved-input-source current)
-                      (mac-ime-set-input-source source)
-                      (add-hook 'pre-command-hook #'mac-ime--restore-input-source)))))
+  (unless mac-ime--saved-input-source
+    (cl-loop for (k . m) in mac-ime-prefix-keys
+             if (and (= keycode k)
+                     (= (logand modifiers m) m))
+             return (let ((source (mac-ime--get-ime-off-input-source))
+                          (current (mac-ime-get-input-source)))
+                      (when (and source current (not (string= source current)))
+                        (setq mac-ime--saved-input-source current)
+                        (mac-ime-set-input-source source)
+                        (add-hook 'pre-command-hook #'mac-ime--restore-input-source))))))
 
 (defun mac-ime--load-module ()
   "Load the dynamic module if not already loaded."
