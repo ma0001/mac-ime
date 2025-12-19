@@ -137,12 +137,21 @@ This function is intended to be added to `mac-ime-functions`."
         (module-load mac-ime-module-path)
       (message "mac-ime: Module not found at %s." mac-ime-module-path))))
 
+(defvar mac-ime--last-buffer nil
+  "The buffer that was current during the last poll.")
+
 (defun mac-ime-handler (keycode modifiers)
   "Internal handler called by the C module.
 Calls functions in `mac-ime-functions`."
   (run-hook-with-args 'mac-ime-functions keycode modifiers)
-  (mac-ime--check-input-source-change)
-  (mac-ime--sync-input-method))
+  ;; Skip synchronization if the buffer has changed recently.
+  ;; This prevents race conditions where the poll runs before window-selection-change-functions.
+  (let ((current (current-buffer)))
+    (if (eq current mac-ime--last-buffer)
+        (progn
+          (mac-ime--check-input-source-change)
+          (mac-ime--sync-input-method))
+      (setq mac-ime--last-buffer current))))
   
 
 (defvar mac-ime-last-on-input-source nil
