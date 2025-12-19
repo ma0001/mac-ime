@@ -230,6 +230,7 @@ Otherwise, deactivate IME."
       (dolist (func mac-ime-auto-deactivate-functions)
         (mac-ime-auto-deactivate func))
       (add-hook 'window-selection-change-functions #'mac-ime-update-state)
+      (add-hook 'focus-in-hook #'mac-ime--on-focus)
       (message "mac-ime enabled."))))
 
 ;;;###autoload
@@ -245,6 +246,7 @@ Otherwise, deactivate IME."
     (mac-ime-internal-stop)
     (dolist (func mac-ime-auto-deactivate-functions)
       (advice-remove func #'mac-ime--auto-deactivate-advice))
+    (remove-hook 'focus-in-hook #'mac-ime--on-focus)
     (remove-hook 'window-selection-change-functions #'mac-ime-update-state)
     (message "mac-ime disabled.")))
 
@@ -296,6 +298,14 @@ The IME state is restored after FUNC completes."
 
 (defvar mac-ime--expected-input-source nil
   "The expected input source ID when synchronization is paused.")
+
+(defun mac-ime--on-focus ()
+  "Handler for focus-in-hook.
+Resets sync state and synchronizes input method."
+  (mac-ime--debug 2 "mac-ime--on-focus called")
+  (setq mac-ime--sync-paused nil
+        mac-ime--expected-input-source nil)
+  (mac-ime--sync-input-method))
 
 (defun mac-ime--sync-input-method ()
   "Synchronize `current-input-method` with the macOS input source."
