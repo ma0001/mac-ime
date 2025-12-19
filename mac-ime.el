@@ -60,16 +60,22 @@ If the keycode matches and the specified modifiers are set, IME is deactivated."
   :type '(alist :key-type integer :value-type integer)
   :group 'mac-ime)
 
+(defcustom mac-ime-no-ime-input-source-regexp "\\(keylayout\\|roman\\)"
+  "Regexp matching input source IDs that indicate IME is off.
+Case is ignored."
+  :type 'regexp
+  :group 'mac-ime)
+
 (defcustom mac-ime-ime-off-input-source nil
   "Input source ID to switch to when a prefix key is pressed (to turn off IME).
-If nil, `mac-ime-last-off-input-source` or the first input source containing 'keylayout' in its ID will be used."
+If nil, `mac-ime-last-off-input-source` or the first input source matching `mac-ime-no-ime-input-source-regexp` will be used."
   :type '(choice (const :tag "Auto-detect" nil)
                  (string :tag "Input Source ID"))
   :group 'mac-ime)
 
 (defcustom mac-ime-ime-on-input-source nil
   "Input source ID to switch to when activating IME.
-If nil, `mac-ime-last-on-input-source` or the first input source containing 'inputmethod' will be used."
+If nil, `mac-ime-last-on-input-source` or the first input source NOT matching `mac-ime-no-ime-input-source-regexp` will be used."
   :type '(choice (const :tag "Auto-detect" nil)
                  (string :tag "Input Source ID"))
   :group 'mac-ime)
@@ -96,24 +102,26 @@ If nil, `mac-ime-last-on-input-source` or the first input source containing 'inp
   "Return the input source ID to use to turn off IME.
 If `mac-ime-ime-off-input-source` is non-nil, return it.
 Otherwise, use `mac-ime-last-off-input-source`.
-If that is also nil, find the first input source containing 'keylayout' and cache it."
+If that is also nil, find the first input source matching `mac-ime-no-ime-input-source-regexp` and cache it."
   (or mac-ime-ime-off-input-source
       mac-ime-last-off-input-source
       (setq mac-ime-last-off-input-source
             (cl-loop for source in (mac-ime-get-input-source-list)
-                     if (string-match-p "keylayout" source)
+                     if (let ((case-fold-search t))
+                          (string-match-p mac-ime-no-ime-input-source-regexp source))
                      return source))))
 
 (defun mac-ime--get-ime-on-input-source ()
   "Return the input source ID to use to turn on IME.
 If `mac-ime-ime-on-input-source` is non-nil, return it.
 Otherwise, use `mac-ime-last-on-input-source`.
-If that is also nil, find the first input source containing 'inputmethod' and cache it."
+If that is also nil, find the first input source NOT matching `mac-ime-no-ime-input-source-regexp` and cache it."
   (or mac-ime-ime-on-input-source
       mac-ime-last-on-input-source
       (setq mac-ime-last-on-input-source
             (cl-loop for source in (mac-ime-get-input-source-list)
-                     if (string-match-p "inputmethod" source)
+                     if (not (let ((case-fold-search t))
+                               (string-match-p mac-ime-no-ime-input-source-regexp source)))
                      return source))))
 
 (defvar mac-ime--saved-input-source nil
@@ -169,10 +177,10 @@ Calls functions in `mac-ime-functions`."
   
 
 (defvar mac-ime-last-on-input-source nil
-  "The last used input source ID that contains 'inputmethod'.")
+  "The last used input source ID for IME ON.")
 
 (defvar mac-ime-last-off-input-source nil
-  "The last used input source ID that contains 'keylayout'.")
+  "The last used input source ID for IME OFF.")
 
 (defvar mac-ime--current-input-source nil
   "Cache of the current input source ID.")
@@ -182,17 +190,16 @@ Calls functions in `mac-ime-functions`."
 
 (defun mac-ime--check-input-source-change ()
   "Check if input source has changed and update `mac-ime-last-on-input-source` and `mac-ime-last-off-input-source`.
-Only input sources containing 'inputmethod' are saved to on-source, and 'keylayout' to off-source."
+Input sources matching `mac-ime-no-ime-input-source-regexp` are saved to off-source, others to on-source."
   (unless mac-ime--ignore-input-source-change
     (let ((current (mac-ime-get-input-source)))
       (when (and current
                  mac-ime--current-input-source
                  (not (string= current mac-ime--current-input-source)))
-        (cond
-         ((string-match-p "inputmethod" mac-ime--current-input-source)
-          (setq mac-ime-last-on-input-source mac-ime--current-input-source))
-         ((string-match-p "keylayout" mac-ime--current-input-source)
-          (setq mac-ime-last-off-input-source mac-ime--current-input-source))))
+        (let ((case-fold-search t))
+          (if (string-match-p mac-ime-no-ime-input-source-regexp mac-ime--current-input-source)
+              (setq mac-ime-last-off-input-source mac-ime--current-input-source)
+            (setq mac-ime-last-on-input-source mac-ime--current-input-source))))
       (setq mac-ime--current-input-source current))))
 
 (defun mac-ime-poll ()
@@ -318,15 +325,14 @@ Resets sync state and synchronizes input method."
               (mac-ime--debug 2 "mac-ime--sync-input-method: sync resumed (reached expected source: %s)" current-source)
               (setq mac-ime--sync-paused nil
                     mac-ime--expected-input-source nil))
-          (cond
-           ((string-match-p "inputmethod" current-source)
-            (unless (equal current-input-method mac-ime-input-method)
-              (mac-ime--debug 2 "mac-ime--sync-input-method: activating input method (source: %s)" current-source)
-              (activate-input-method mac-ime-input-method)))
-           ((string-match-p "keylayout" current-source)
-            (when (equal current-input-method mac-ime-input-method)
-              (mac-ime--debug 2 "mac-ime--sync-input-method: deactivating input method (source: %s)" current-source)
-              (deactivate-input-method)))))))))
+          (let ((case-fold-search t))
+            (if (string-match-p mac-ime-no-ime-input-source-regexp current-source)
+                (when (equal current-input-method mac-ime-input-method)
+                  (mac-ime--debug 2 "mac-ime--sync-input-method: deactivating input method (source: %s)" current-source)
+                  (deactivate-input-method))
+              (unless (equal current-input-method mac-ime-input-method)
+                (mac-ime--debug 2 "mac-ime--sync-input-method: activating input method (source: %s)" current-source)
+                (activate-input-method mac-ime-input-method)))))))))
 
 ;;;###autoload
 (defun mac-ime-activate-ime ()
