@@ -119,9 +119,6 @@ If that is also nil, find the first input source containing 'inputmethod' and ca
 (defvar mac-ime--saved-input-source nil
   "Saved input source ID to restore.")
 
-(defvar mac-ime--previous-input-source nil
-  "Input source ID before Emacs was activated.")
-
 (defun mac-ime--restore-input-source ()
   "Restore the saved input source."
   (when mac-ime--saved-input-source
@@ -219,21 +216,6 @@ Otherwise, deactivate IME."
       (mac-ime-activate-ime)
     (mac-ime-deactivate-ime)))
 
-(defun mac-ime-handle-focus-in ()
-  "Handle focus-in event.
-Save the current input source and update IME state."
-  (let ((source (mac-ime-get-input-source)))
-    (mac-ime--debug 2 "mac-ime-handle-focus-in: current-source=%s" source)
-    (setq mac-ime--previous-input-source source))
-  (mac-ime-update-state))
-
-(defun mac-ime-restore-origin-input-source ()
-  "Restore the input source used before Emacs was activated."
-  (mac-ime--debug 2 "mac-ime-restore-origin-input-source: previous=%s" mac-ime--previous-input-source)
-  (when mac-ime--previous-input-source
-    (mac-ime-set-input-source mac-ime--previous-input-source)
-    (setq mac-ime--previous-input-source nil)))
-
 ;;;###autoload
 (defun mac-ime-enable ()
   "Enable the global key monitor."
@@ -248,8 +230,6 @@ Save the current input source and update IME state."
       (dolist (func mac-ime-auto-deactivate-functions)
         (mac-ime-auto-deactivate func))
       (add-hook 'window-selection-change-functions #'mac-ime-update-state)
-      (add-hook 'focus-in-hook #'mac-ime-handle-focus-in)
-      (add-hook 'focus-out-hook #'mac-ime-restore-origin-input-source)
       (message "mac-ime enabled."))))
 
 ;;;###autoload
@@ -266,8 +246,6 @@ Save the current input source and update IME state."
     (dolist (func mac-ime-auto-deactivate-functions)
       (advice-remove func #'mac-ime--auto-deactivate-advice))
     (remove-hook 'window-selection-change-functions #'mac-ime-update-state)
-    (remove-hook 'focus-in-hook #'mac-ime-handle-focus-in)
-    (remove-hook 'focus-out-hook #'mac-ime-restore-origin-input-source)
     (message "mac-ime disabled.")))
 
 ;;;###autoload
