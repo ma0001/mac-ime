@@ -79,6 +79,19 @@ If nil, `mac-ime-last-on-input-source` or the first input source containing 'inp
   :type '(repeat function)
   :group 'mac-ime)
 
+(defcustom mac-ime-debug-level 0
+  "Debug level for mac-ime.
+0: No debug messages.
+1: Output input keys.
+2: Output function execution messages."
+  :type 'integer
+  :group 'mac-ime)
+
+(defun mac-ime--debug (level format-string &rest args)
+  "Output a debug message if `mac-ime-debug-level` is >= LEVEL."
+  (when (>= mac-ime-debug-level level)
+    (apply #'message (concat "mac-ime [DEBUG]: " format-string) args)))
+
 (defun mac-ime--get-ime-off-input-source ()
   "Return the input source ID to use to turn off IME.
 If `mac-ime-ime-off-input-source` is non-nil, return it.
@@ -146,6 +159,7 @@ This function is intended to be added to `mac-ime-functions`."
 (defun mac-ime-handler (keycode modifiers)
   "Internal handler called by the C module.
 Calls functions in `mac-ime-functions`."
+  (mac-ime--debug 1 "Key event: keycode=%d, modifiers=%d" keycode modifiers)
   (run-hook-with-args 'mac-ime-functions keycode modifiers)
   ;; Skip synchronization if the buffer has changed recently.
   ;; This prevents race conditions where the poll runs before window-selection-change-functions.
@@ -200,6 +214,7 @@ Only input sources containing 'inputmethod' are saved to on-source, and 'keylayo
   "Update IME state based on the current input method.
 If `current-input-method` is `mac-ime-input-method`, activate IME.
 Otherwise, deactivate IME."
+  (mac-ime--debug 2 "mac-ime-update-state: current-input-method=%s" current-input-method)
   (if (equal current-input-method mac-ime-input-method)
       (mac-ime-activate-ime)
     (mac-ime-deactivate-ime)))
@@ -207,11 +222,14 @@ Otherwise, deactivate IME."
 (defun mac-ime-handle-focus-in ()
   "Handle focus-in event.
 Save the current input source and update IME state."
-  (setq mac-ime--previous-input-source (mac-ime-get-input-source))
+  (let ((source (mac-ime-get-input-source)))
+    (mac-ime--debug 2 "mac-ime-handle-focus-in: current-source=%s" source)
+    (setq mac-ime--previous-input-source source))
   (mac-ime-update-state))
 
 (defun mac-ime-restore-origin-input-source ()
   "Restore the input source used before Emacs was activated."
+  (mac-ime--debug 2 "mac-ime-restore-origin-input-source: previous=%s" mac-ime--previous-input-source)
   (when mac-ime--previous-input-source
     (mac-ime-set-input-source mac-ime--previous-input-source)
     (setq mac-ime--previous-input-source nil)))
@@ -220,6 +238,7 @@ Save the current input source and update IME state."
 (defun mac-ime-enable ()
   "Enable the global key monitor."
   (interactive)
+  (mac-ime--debug 2 "mac-ime-enable called")
   (mac-ime--load-module)
   (when (featurep 'mac-ime-module)
     (mac-ime-internal-start)
@@ -237,6 +256,7 @@ Save the current input source and update IME state."
 (defun mac-ime-disable ()
   "Disable the global key monitor."
   (interactive)
+  (mac-ime--debug 2 "mac-ime-disable called")
   (when mac-ime-timer
     (cancel-timer mac-ime-timer)
     (setq mac-ime-timer nil))
@@ -260,6 +280,7 @@ Save the current input source and update IME state."
 ;;;###autoload
 (defun mac-ime-set-input-source (source-id)
   "Set the current input source to SOURCE-ID."
+  (mac-ime--debug 2 "mac-ime-set-input-source: %s" source-id)
   (mac-ime--load-module)
   (when (featurep 'mac-ime-module)
     (mac-ime-internal-set-input-source source-id)))
@@ -306,14 +327,17 @@ The IME state is restored after FUNC completes."
         (if mac-ime--sync-paused
             (when (and mac-ime--expected-input-source
                        (string= current-source mac-ime--expected-input-source))
+              (mac-ime--debug 2 "mac-ime--sync-input-method: sync resumed (reached expected source: %s)" current-source)
               (setq mac-ime--sync-paused nil
                     mac-ime--expected-input-source nil))
           (cond
            ((string-match-p "inputmethod" current-source)
             (unless (equal current-input-method mac-ime-input-method)
+              (mac-ime--debug 2 "mac-ime--sync-input-method: activating input method (source: %s)" current-source)
               (activate-input-method mac-ime-input-method)))
            ((string-match-p "keylayout" current-source)
             (when (equal current-input-method mac-ime-input-method)
+              (mac-ime--debug 2 "mac-ime--sync-input-method: deactivating input method (source: %s)" current-source)
               (deactivate-input-method)))))))))
 
 ;;;###autoload
@@ -322,6 +346,7 @@ The IME state is restored after FUNC completes."
 Uses `mac-ime--get-ime-on-input-source` to determine the input source."
   (interactive)
   (let ((source (mac-ime--get-ime-on-input-source)))
+    (mac-ime--debug 2 "mac-ime-activate-ime: source=%s" source)
     (when source
       (mac-ime-set-input-source source)
       (setq mac-ime--sync-paused t
@@ -333,6 +358,7 @@ Uses `mac-ime--get-ime-on-input-source` to determine the input source."
 Uses `mac-ime--get-ime-off-input-source` to determine the input source."
   (interactive)
   (let ((source (mac-ime--get-ime-off-input-source)))
+    (mac-ime--debug 2 "mac-ime-deactivate-ime: source=%s" source)
     (when source
       (mac-ime-set-input-source source)
       (setq mac-ime--sync-paused t
