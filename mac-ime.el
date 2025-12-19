@@ -93,6 +93,19 @@ If nil, `mac-ime-last-on-input-source` or the first input source NOT matching `m
   :type 'integer
   :group 'mac-ime)
 
+(defcustom mac-ime-title-rules
+  '(("romajityping" . "[こ]")
+    ("kanatyping" . "[かな]")
+    (t . "[IME]"))
+  "Alist of rules to determine the input method title based on the input source ID.
+Each element is a cons cell (REGEXP . TITLE).
+The input source ID is matched against REGEXP (case-insensitive).
+If REGEXP is t, it matches any input source and serves as a default.
+The first matching rule determines the title."
+  :type '(alist :key-type (choice (string :tag "Regexp") (const :tag "Default" t))
+                :value-type string)
+  :group 'mac-ime)
+
 (defun mac-ime--debug (level format-string &rest args)
   "Output a debug message if `mac-ime-debug-level` is >= LEVEL."
   (when (>= mac-ime-debug-level level)
@@ -210,7 +223,9 @@ Input sources matching `mac-ime-no-ime-input-source-regexp` are saved to off-sou
 (defun mac-ime-activate-input-method (_input-method)
   "Activate the mac-ime input method."
   (mac-ime-activate-ime)
-  (setq deactivate-current-input-method-function #'mac-ime-deactivate-ime))
+  (setq deactivate-current-input-method-function #'mac-ime-deactivate-ime)
+  (when-let ((source (mac-ime-get-input-source)))
+    (mac-ime--update-title source)))
 
 (register-input-method mac-ime-input-method "Japanese" 'mac-ime-activate-input-method "[こ]" "macOS System IME")
 
@@ -306,6 +321,18 @@ The IME state is restored after FUNC completes."
 (defvar mac-ime--expected-input-source nil
   "The expected input source ID when synchronization is paused.")
 
+(defun mac-ime--update-title (input-source)
+  "Update `current-input-method-title` based on INPUT-SOURCE and `mac-ime-title-rules`."
+  (let ((title (cl-loop for (regexp . t-str) in mac-ime-title-rules
+                        if (or (eq regexp t)
+                               (and (stringp regexp)
+                                    (let ((case-fold-search t))
+                                      (string-match-p regexp input-source))))
+                        return t-str)))
+    (when title
+      (setq current-input-method-title title)
+      (force-mode-line-update))))
+
 (defun mac-ime--on-focus ()
   "Handler for focus-in-hook.
 Resets sync state and synchronizes input method."
@@ -324,7 +351,9 @@ Resets sync state and synchronizes input method."
                        (string= current-source mac-ime--expected-input-source))
               (mac-ime--debug 2 "mac-ime--sync-input-method: sync resumed (reached expected source: %s)" current-source)
               (setq mac-ime--sync-paused nil
-                    mac-ime--expected-input-source nil))
+                    mac-ime--expected-input-source nil)
+              (when (equal current-input-method mac-ime-input-method)
+                (mac-ime--update-title current-source)))
           (let ((case-fold-search t))
             (if (string-match-p mac-ime-no-ime-input-source-regexp current-source)
                 (when (equal current-input-method mac-ime-input-method)
@@ -332,7 +361,9 @@ Resets sync state and synchronizes input method."
                   (deactivate-input-method))
               (unless (equal current-input-method mac-ime-input-method)
                 (mac-ime--debug 2 "mac-ime--sync-input-method: activating input method (source: %s)" current-source)
-                (activate-input-method mac-ime-input-method)))))))))
+                (activate-input-method mac-ime-input-method))
+              (when (equal current-input-method mac-ime-input-method)
+                (mac-ime--update-title current-source)))))))))
 
 ;;;###autoload
 (defun mac-ime-activate-ime ()
