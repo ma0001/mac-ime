@@ -141,7 +141,8 @@ This function is intended to be added to `mac-ime-functions`."
   "Internal handler called by the C module.
 Calls functions in `mac-ime-functions`."
   (run-hook-with-args 'mac-ime-functions keycode modifiers)
-  (mac-ime--check-input-source-change))
+  (mac-ime--check-input-source-change)
+  (mac-ime--sync-input-method))
   
 
 (defvar mac-ime-last-on-input-source nil
@@ -263,6 +264,30 @@ Otherwise, deactivate IME."
 The IME state is restored after FUNC completes."
   (advice-add func :around #'mac-ime--auto-deactivate-advice))
 
+(defvar mac-ime--sync-paused nil
+  "Whether input method synchronization is paused.")
+
+(defvar mac-ime--expected-input-source nil
+  "The expected input source ID when synchronization is paused.")
+
+(defun mac-ime--sync-input-method ()
+  "Synchronize `current-input-method` with the macOS input source."
+  (unless mac-ime--saved-input-source
+    (let ((current-source (mac-ime-get-input-source)))
+      (when current-source
+        (if mac-ime--sync-paused
+            (when (and mac-ime--expected-input-source
+                       (string= current-source mac-ime--expected-input-source))
+              (setq mac-ime--sync-paused nil
+                    mac-ime--expected-input-source nil))
+          (cond
+           ((string-match-p "inputmethod" current-source)
+            (unless (equal current-input-method mac-ime-input-method)
+              (activate-input-method mac-ime-input-method)))
+           ((string-match-p "keylayout" current-source)
+            (when (equal current-input-method mac-ime-input-method)
+              (deactivate-input-method)))))))))
+
 ;;;###autoload
 (defun mac-ime-activate-ime ()
   "Activate the IME input source.
@@ -270,7 +295,9 @@ Uses `mac-ime--get-ime-on-input-source` to determine the input source."
   (interactive)
   (let ((source (mac-ime--get-ime-on-input-source)))
     (when source
-      (mac-ime-set-input-source source))))
+      (mac-ime-set-input-source source)
+      (setq mac-ime--sync-paused t
+            mac-ime--expected-input-source source))))
 
 ;;;###autoload
 (defun mac-ime-deactivate-ime ()
@@ -279,7 +306,9 @@ Uses `mac-ime--get-ime-off-input-source` to determine the input source."
   (interactive)
   (let ((source (mac-ime--get-ime-off-input-source)))
     (when source
-      (mac-ime-set-input-source source))))
+      (mac-ime-set-input-source source)
+      (setq mac-ime--sync-paused t
+            mac-ime--expected-input-source source))))
       
 (provide 'mac-ime)
 ;;; mac-ime.el ends here
