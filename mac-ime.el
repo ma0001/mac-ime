@@ -45,20 +45,67 @@ Each function is called with two arguments: (keycode modifiers)."
 (defconst mac-ime-kVK_ANSI_H 4 "Virtual key code for 'h'.")
 (defconst mac-ime-kVK_ANSI_G 5 "Virtual key code for 'g'.")
 (defconst mac-ime-kVK_Escape 53 "Virtual key code for 'Escape'.")
-(defconst mac-ime-NSEventModifierFlagControl 262401 "Modifier flag for Control key.")
-(defconst mac-ime-NSEventModifierFlagCmd 1048840 "Modifier flag for Cmd key.")
+(defconst mac-ime-NSEventModifierFlagCmd #x100108 "Modifier flag for Cmd key.")
+(defconst mac-ime-NSEventModifierFlagRightCmd #x100110 "Modifier flag for Right Cmd key.")
+(defconst mac-ime-NSEventModifierFlagControl #x40101 "Modifier flag for Control key.")
+(defconst mac-ime-NSEventModifierFlagRightControl #x42100 "Modifier flag for Right Control key.")
+(defconst mac-ime-NSEventModifierFlagOption #x80120 "Modifier flag for Option key.")
+(defconst mac-ime-NSEventModifierFlagRightOption #x80140 "Modifier flag for Right Option key.")
+(defconst mac-ime-NSEventModifierFlagFunction #x800100 "Modifier flag for Function key.")
 
-(defcustom mac-ime-prefix-keys
-  `((,mac-ime-kVK_ANSI_X . ,mac-ime-NSEventModifierFlagControl)
-    (,mac-ime-kVK_ANSI_C . ,mac-ime-NSEventModifierFlagControl)
-    (,mac-ime-kVK_ANSI_H . ,mac-ime-NSEventModifierFlagControl)
-    (,mac-ime-kVK_ANSI_G . ,mac-ime-NSEventModifierFlagCmd)
-    (,mac-ime-kVK_Escape . 0))
+(defcustom mac-ime-prefix-keys nil
   "Alist of prefix keys that trigger IME deactivation.
 Each element is a cons cell (KEYCODE . MODIFIERS).
-If the keycode matches and the specified modifiers are set, IME is deactivated."
+If nil, it is automatically configured based on mac-*-modifier variables."
   :type '(alist :key-type integer :value-type integer)
   :group 'mac-ime)
+
+(defvar mac-ime-modifier-action-table
+  '((control . (mac-ime-kVK_ANSI_X mac-ime-kVK_ANSI_C mac-ime-kVK_ANSI_H))
+    (meta . (mac-ime-kVK_ANSI_G))
+    (nomodifier . (mac-ime-kVK_Escape)))
+  "Table mapping modifier values to list of key codes to register.")
+
+(defun mac-ime-resolve-modifier-value (modifier-var)
+  "Resolve the value of MODIFIER-VAR, handling 'left inheritance."
+  (let ((val (if (boundp modifier-var) (symbol-value modifier-var) nil)))
+    (if (eq val 'left)
+        (let ((base-var-name (replace-regexp-in-string "-right-" "-" (symbol-name modifier-var))))
+          (let ((base-var (intern base-var-name)))
+            (if (boundp base-var)
+                (symbol-value base-var)
+              val)))
+      val)))
+
+(defvar mac-ime--generated-prefix-keys nil
+  "Cache for generated prefix keys.")
+
+(defun mac-ime-generate-prefix-keys ()
+  "Generate prefix keys based on mac modifier settings."
+  (or mac-ime--generated-prefix-keys
+      (let ((keys '())
+            (modifier-vars
+             `((mac-command-modifier . ,mac-ime-NSEventModifierFlagCmd)
+               (mac-right-command-modifier . ,mac-ime-NSEventModifierFlagRightCmd)
+               (mac-control-modifier . ,mac-ime-NSEventModifierFlagControl)
+               (mac-right-control-modifier . ,mac-ime-NSEventModifierFlagRightControl)
+               (mac-option-modifier . ,mac-ime-NSEventModifierFlagOption)
+               (mac-right-option-modifier . ,mac-ime-NSEventModifierFlagRightOption)
+               (mac-function-modifier . ,mac-ime-NSEventModifierFlagFunction))))
+        (dolist (entry modifier-vars)
+          (let* ((var (car entry))
+                 (flag (cdr entry)))
+            (let ((val (mac-ime-resolve-modifier-value var)))
+              (let ((key-codes (cdr (assoc val mac-ime-modifier-action-table))))
+                (dolist (code-sym key-codes)
+                  (let ((code (symbol-value code-sym)))
+                    (push (cons code flag) keys)))))))
+        ;; Add default keys (modifier 0)
+        (let ((default-keys (cdr (assoc 'nomodifier mac-ime-modifier-action-table))))
+          (dolist (code-sym default-keys)
+            (let ((code (symbol-value code-sym)))
+              (push (cons code 0) keys))))
+        (setq mac-ime--generated-prefix-keys keys))))
 
 (defcustom mac-ime-no-ime-input-source-regexp "\\(keylayout\\|roman\\)"
   "Regexp matching input source IDs that indicate IME is off.
@@ -153,16 +200,17 @@ If that is also nil, find the first input source NOT matching `mac-ime-no-ime-in
 This function is intended to be added to `mac-ime-functions`."
   (when (and (not mac-ime--saved-input-source)
              (equal current-input-method mac-ime-input-method))
-    (cl-loop for (k . m) in mac-ime-prefix-keys
-             if (and (= keycode k)
-                     (= (logand modifiers m) m))
-             return (let ((source (mac-ime--get-ime-off-input-source))
-                          (current (mac-ime-get-input-source)))
-                      (when (and source current (not (string= source current)))
-                        (setq mac-ime--saved-input-source current)
-                        (setq mac-ime--ignore-input-source-change t)
-                        (mac-ime-set-input-source source)
-                        (add-hook 'pre-command-hook #'mac-ime--restore-input-source))))))
+    (let ((prefix-keys (or mac-ime-prefix-keys (mac-ime-generate-prefix-keys))))
+      (cl-loop for (k . m) in prefix-keys
+               if (and (= keycode k)
+                       (= (logand modifiers m) m))
+               return (let ((source (mac-ime--get-ime-off-input-source))
+                            (current (mac-ime-get-input-source)))
+                        (when (and source current (not (string= source current)))
+                          (setq mac-ime--saved-input-source current)
+                          (setq mac-ime--ignore-input-source-change t)
+                          (mac-ime-set-input-source source)
+                          (add-hook 'pre-command-hook #'mac-ime--restore-input-source)))))))
 
 (defun mac-ime--load-module ()
   "Load the dynamic module if not already loaded."
