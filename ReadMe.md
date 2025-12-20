@@ -95,7 +95,7 @@ metaや、control以外のキーを使うようなキーでも制御したい場
 
 ## カスタマイズ
 
-- `mac-ime-poll-interval`: イベントをポーリングする間隔（秒）。デフォルトは `0.05` です。
-- `mac-ime-functions`: キーイベント発生時に呼び出されるフック。引数として `(keycode modifiers)` を受け取ります。
 - `mac-ime-prefix-keys`: IME無効化のトリガーとなるプレフィックスキーの設定。
+- `mac-ime-auto-deactivate-functions`: 実行時に自動的にIMEを無効化する関数のリスト。デフォルトではミニバッファ入力時などにIMEをオフにします。
+- `mac-ime-temporary-deactivate-functions`: 実行前に一時的にIMEを無効化し、コマンド終了後に元の状態に戻す関数のリスト。デフォルトでは `universal-argument` などが含まれます。
 
