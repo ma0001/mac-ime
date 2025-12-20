@@ -54,7 +54,7 @@ make
 (mac-ime-enable)
 ```
 
-本機能が有効になるのはinput methodgが"mac-ime"の場合です。
+本機能が有効になるのはinput methodが"mac-ime"の場合です。
 上記設定が完了したら、C-\ (toggle-input-method) や cmd-space などで日本語入力状態にした状態でC-xなどのプリフィックスキーを入力するとRoman入力に切り替わり、コマンド実行後は元に戻ります。
 
 
