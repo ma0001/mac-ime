@@ -127,8 +127,19 @@ If nil, `mac-ime-last-on-input-source` or the first input source NOT matching `m
                  (string :tag "Input Source ID"))
   :group 'mac-ime)
 
-(defcustom mac-ime-auto-deactivate-functions '(universal-argument read-string read-char read-from-minibuffer y-or-n-p yes-or-no-p map-y-or-n-p)
+(defcustom mac-ime-auto-deactivate-functions '(read-string read-char read-from-minibuffer y-or-n-p yes-or-no-p map-y-or-n-p)
   "List of functions to automatically deactivate IME during execution."
+  :type '(repeat function)
+  :group 'mac-ime)
+
+(defcustom mac-ime-temporary-deactivate-functions '(universal-argument--mode)
+  "List of functions to temporarily deactivate IME before execution.
+The IME state is restored in `pre-command-hook`.
+
+Note: `universal-argument--mode` is used instead of `universal-argument`
+because `universal-argument` is only called once. `universal-argument--mode`
+is called by `universal-argument`, `universal-argument-more`, and
+`digit-argument`, ensuring IME is deactivated for the entire sequence."
   :type '(repeat function)
   :group 'mac-ime)
 
@@ -141,7 +152,7 @@ If nil, `mac-ime-last-on-input-source` or the first input source NOT matching `m
   :group 'mac-ime)
 
 (defcustom mac-ime-title-rules
-  '(("romajityping" . "[こ]")
+  '(("romajityping" . "[あ]")
     ("kanatyping" . "[かな]")
     (t . "[IME]"))
   "Alist of rules to determine the input method title based on the input source ID.
@@ -195,6 +206,20 @@ If that is also nil, find the first input source NOT matching `mac-ime-no-ime-in
   (setq mac-ime--ignore-input-source-change nil)
   (remove-hook 'pre-command-hook #'mac-ime--restore-input-source))
 
+(defun mac-ime-deactivate-ime-temporarily ()
+  "Deactivate IME temporarily.
+The original input source is restored in `pre-command-hook`."
+  (mac-ime--debug 2 "mac-ime-deactivate-ime-temporarily")
+  (when (and (not mac-ime--saved-input-source)
+             (equal current-input-method mac-ime-input-method))
+    (let ((source (mac-ime--get-ime-off-input-source))
+          (current (mac-ime-get-input-source)))
+      (when (and source current (not (string= source current)))
+        (setq mac-ime--saved-input-source current)
+        (setq mac-ime--ignore-input-source-change t)
+        (mac-ime-set-input-source source)
+        (add-hook 'pre-command-hook #'mac-ime--restore-input-source)))))
+
 (defun mac-ime-deactivate-ime-on-prefix (keycode modifiers)
   "Deactivate IME when a prefix key defined in `mac-ime-prefix-keys` is pressed.
 This function is intended to be added to `mac-ime-functions`."
@@ -204,13 +229,7 @@ This function is intended to be added to `mac-ime-functions`."
       (cl-loop for (k . m) in prefix-keys
                if (and (= keycode k)
                        (= (logand modifiers m) m))
-               return (let ((source (mac-ime--get-ime-off-input-source))
-                            (current (mac-ime-get-input-source)))
-                        (when (and source current (not (string= source current)))
-                          (setq mac-ime--saved-input-source current)
-                          (setq mac-ime--ignore-input-source-change t)
-                          (mac-ime-set-input-source source)
-                          (add-hook 'pre-command-hook #'mac-ime--restore-input-source)))))))
+               return (mac-ime-deactivate-ime-temporarily)))))
 
 (defun mac-ime--load-module ()
   "Load the dynamic module if not already loaded."
@@ -299,6 +318,8 @@ Otherwise, deactivate IME."
       (add-hook 'mac-ime-functions #'mac-ime-deactivate-ime-on-prefix)
       (dolist (func mac-ime-auto-deactivate-functions)
         (mac-ime-auto-deactivate func))
+      (dolist (func mac-ime-temporary-deactivate-functions)
+        (mac-ime-temporary-deactivate func))
       (add-hook 'window-selection-change-functions #'mac-ime-update-state)
       (add-hook 'focus-in-hook #'mac-ime--on-focus)
       (message "mac-ime enabled."))))
@@ -316,6 +337,8 @@ Otherwise, deactivate IME."
     (mac-ime-internal-stop)
     (dolist (func mac-ime-auto-deactivate-functions)
       (advice-remove func #'mac-ime--auto-deactivate-advice))
+    (dolist (func mac-ime-temporary-deactivate-functions)
+      (advice-remove func #'mac-ime--temporary-deactivate-advice))
     (remove-hook 'focus-in-hook #'mac-ime--on-focus)
     (remove-hook 'window-selection-change-functions #'mac-ime-update-state)
     (message "mac-ime disabled.")))
@@ -362,6 +385,15 @@ Otherwise, deactivate IME."
   "Add advice to FUNC to deactivate IME during its execution.
 The IME state is restored after FUNC completes."
   (advice-add func :around #'mac-ime--auto-deactivate-advice))
+
+(defun mac-ime--temporary-deactivate-advice (&rest _args)
+  "Advice to deactivate IME temporarily."
+  (mac-ime-deactivate-ime-temporarily))
+
+;;;###autoload
+(defun mac-ime-temporary-deactivate (func)
+  "Add advice to FUNC to deactivate IME temporarily before its execution."
+  (advice-add func :before #'mac-ime--temporary-deactivate-advice))
 
 (defvar mac-ime--sync-paused nil
   "Whether input method synchronization is paused.")
