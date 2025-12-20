@@ -57,10 +57,13 @@ make
 本機能が有効になるのはinput methodが"mac-ime"の場合です。
 上記設定が完了したら、C-\ (toggle-input-method) や cmd-space などで日本語入力状態にした状態でC-xなどのプリフィックスキーを入力するとRoman入力に切り替わり、コマンド実行後は元に戻ります。
 
+ミニバッファへの入力時にRomen入力となり入力後に元に戻すようにするため、mac-ime-auto-deactivate-functionsに指定してある関数では、関数実行前にRoman入力とし関数実行後に戻す処理を追加しています。mac-ime-auto-deactivate-functionsの設定を変更することにより動作させる関数を変えることができます。
+
+また、C-uのようにコマンド実行後のキーでRoman入力として次のコマンド実行前に戻す必要があるものについては、変数mac-ime-temporary-deactivate-functionsに指定しています。（universal-argumentではC-u後の最初のキー入力しかRomanとならないため、その後の数字入力で繰り返し呼ばれるuniversal-argument--modeを登録しています）
 
 特別なキーバイディングでプリフィックスキーが変わっている場合などはmac-ime-modifier-action-tableを(mac-ime-enable)前に設定することにより変えることができます。
 ```elisp
-;; controlキーの修飾で 'z' (keycode 6) もプレフィックスとして扱いたい場合の例
+;; controlキーの修飾で 'z' (keycode 6) をプレフィックスとして扱いたい場合の例
 (setq mac-ime-modifier-action-table
       '((control . (mac-ime-kVK_ANSI_X mac-ime-kVK_ANSI_C mac-ime-kVK_ANSI_H 6))
         (meta . (mac-ime-kVK_ANSI_G))
