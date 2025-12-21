@@ -77,7 +77,40 @@
     (mac-ime-poll)
     
     ;; Check if IME was deactivated (input source changed to US)
-    (should (equal (mac-ime-internal-get-input-source) "com.apple.keylayout.US"))))
+    (should (equal (mac-ime-internal-get-input-source) "com.apple.keylayout.US"))
+    
+    ;; Run pre-command-hook to restore IME
+    (run-hooks 'pre-command-hook)
+    
+    ;; Check if IME was restored
+    (should (equal (mac-ime-internal-get-input-source) "com.apple.inputmethod.Kotoeri.RomajiTyping"))))
+
+(ert-deftest mac-ime-auto-deactivate-functions-test ()
+  "Test automatic IME deactivation for specific functions."
+  (mac-ime-test-reset)
+  ;; Setup: IME is ON
+  (mac-ime-internal-set-input-source "com.apple.inputmethod.Kotoeri.RomajiTyping")
+  (setq current-input-method mac-ime-input-method)
+  (setq mac-ime-last-off-input-source "com.apple.keylayout.US")
+  
+  (let ((inner-source nil))
+    (defun mac-ime-test-func ()
+      (setq inner-source (mac-ime-internal-get-input-source)))
+    
+    ;; Register function
+    (mac-ime-auto-deactivate 'mac-ime-test-func)
+    
+    ;; Call function
+    (mac-ime-test-func)
+    
+    ;; Check if IME was deactivated inside the function
+    (should (equal inner-source "com.apple.keylayout.US"))
+    
+    ;; Check if IME was restored after the function
+    (should (equal (mac-ime-internal-get-input-source) "com.apple.inputmethod.Kotoeri.RomajiTyping"))
+    
+    ;; Cleanup advice
+    (advice-remove 'mac-ime-test-func #'mac-ime--auto-deactivate-advice)))
 
 (ert-deftest mac-ime-sync-state-test ()
   "Test synchronization of Emacs input method state with OS input source."
