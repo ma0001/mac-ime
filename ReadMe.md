@@ -55,11 +55,19 @@ make
 ```
 
 本機能が有効になるのはinput methodが"mac-ime"の場合です。
-上記設定が完了したら、C-\ (toggle-input-method) や cmd-space などで日本語入力状態にした状態でC-xなどのプリフィックスキーを入力するとRoman入力に切り替わり、コマンド実行後は元に戻ります。
+C-\ (toggle-input-method) や cmd-space などで日本語入力状態にすることによりIMEの自動オフと復帰動作を行うようになります。
 
-ミニバッファへの入力時にRomen入力となり入力後に元に戻すようにするため、mac-ime-auto-deactivate-functionsに指定してある関数では、関数実行前にRoman入力とし関数実行後に戻す処理を追加しています。mac-ime-auto-deactivate-functionsの設定を変更することにより動作させる関数を変えることができます。
 
-また、C-uのようにコマンド実行後のキーでRoman入力として次のコマンド実行前に戻す必要があるものについては、変数mac-ime-temporary-deactivate-functionsに指定しています。（universal-argumentではC-u後の最初のキー入力しかRomanとならないため、その後の数字入力で繰り返し呼ばれるuniversal-argument--modeを登録しています）
+### プリフィックスキー入力時のIMEオフ
+
+日本語入力が有効な状態でC-xなどのプリフィックスキーを入力するとRoman入力に切り替わり、コマンド実行後は元に戻ります。
+
+デフォルトのプリフィックスキー定義は以下の通りです
+- C-x
+- C-c
+- C-h
+- M-g
+- Esc
 
 特別なキーバイディングでプリフィックスキーが変わっている場合などはmac-ime-modifier-action-tableを(mac-ime-enable)前に設定することにより変えることができます。
 ```elisp
@@ -71,13 +79,31 @@ make
 ```
 
 metaや、control以外のキーを使うようなキーでも制御したい場合はmac-ime-prefix-keysを設定することで可能です。mac-ime-debug-levelを1に設定することによりキーコードがメッセージに出力されるのでそれを参考に設定してください。
+
 ```elisp
 ;; C-j (keycode: 38, modifiers: 262401) をプレフィックスキーとして登録する例
 (setq mac-ime-prefix-keys
       '((38 . 262401)))
 ```
 
-本モジュールではmacOSの入力ソースがRomanなのか日本語などの非Romanなのかを判定する必要があるためinput source IDを正規表現を使って判定を行っています。もし特殊なインプットメソッドを使っていてこの判断が正しく動作しない場合はmac-ime-no-ime-input-source-regexpで正しくRomanを判断できるように設定してください。現在使用可能なinput source IDは(mac-ime-get-input-source-list)で取得できます。
+
+### ミニバッファ入力時のIMEオフ
+
+ミニバッファへの入力時にRoman入力となり入力後に元に戻すようにするため、mac-ime-auto-deactivate-functionsに指定してある関数では、関数実行前にRoman入力とし関数実行後に戻す処理を追加しています。mac-ime-auto-deactivate-functionsの設定を変更することにより動作させる関数を変えることができます。
+
+デフォルトで設定している関数は
+- read-string
+- read-char
+- read-from-minibuffer
+- y-or-n-p yes-or-no-p
+- map-y-or-n-p
+
+
+また、C-uのようにコマンド実行後のキーでRoman入力として次のコマンド実行前に戻す必要があるものについては、変数mac-ime-temporary-deactivate-functionsに指定しています。（universal-argumentではC-u後の最初のキー入力しかRomanとならないため、その後の数字入力で繰り返し呼ばれるuniversal-argument--modeを登録しています）
+
+### IMEの入力モード判定
+
+本モジュールではmacOSの入力ソースがRomanなのか日本語などの非Romanなのかを判定する必要があるためinput source IDを正規表現を使って判定を行っています。もし特殊なIMEを使っていてこの判断が正しく動作しない場合はmac-ime-no-ime-input-source-regexpで正しくRomanを判断できるように設定してください。現在使用可能なinput source IDは(mac-ime-get-input-source-list)で取得できます。
 
 
 ## 提供される関数
