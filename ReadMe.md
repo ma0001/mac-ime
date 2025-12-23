@@ -67,6 +67,7 @@ C-\ (toggle-input-method) や cmd-space などで日本語入力状態にする�
 - C-c
 - C-h
 - M-g
+- M-s
 - Esc
 
 特別なキーバイディングでプリフィックスキーが変わっている場合などはmac-ime-modifier-action-tableを(mac-ime-enable)前に設定することにより変えることができます。

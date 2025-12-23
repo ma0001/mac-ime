@@ -40,6 +40,7 @@ Each function is called with two arguments: (keycode modifiers)."
   :type 'hook
   :group 'mac-ime)
 
+(defconst mac-ime-kVK_ANSI_S 1 "Virtual key code for 's'.")
 (defconst mac-ime-kVK_ANSI_X 7 "Virtual key code for 'x'.")
 (defconst mac-ime-kVK_ANSI_C 8 "Virtual key code for 'c'.")
 (defconst mac-ime-kVK_ANSI_H 4 "Virtual key code for 'h'.")
@@ -62,7 +63,7 @@ If nil, it is automatically configured based on mac-*-modifier variables."
 
 (defvar mac-ime-modifier-action-table
   '((control . (mac-ime-kVK_ANSI_X mac-ime-kVK_ANSI_C mac-ime-kVK_ANSI_H))
-    (meta . (mac-ime-kVK_ANSI_G))
+    (meta . (mac-ime-kVK_ANSI_G mac-ime-kVK_ANSI_S))
     (nomodifier . (mac-ime-kVK_Escape)))
   "Table mapping modifier values to list of key codes to register.")
 
