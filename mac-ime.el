@@ -19,6 +19,13 @@
 (require 'cl-lib)
 (require 'nadvice)
 
+(declare-function mac-ime-internal-get-input-source-list nil ())
+(declare-function mac-ime-internal-get-input-source nil ())
+(declare-function mac-ime-internal-set-input-source nil (source-id))
+(declare-function mac-ime-internal-poll nil (hook-func))
+(declare-function mac-ime-internal-start nil ())
+(declare-function mac-ime-internal-stop nil ())
+
 (defconst mac-ime-input-method "mac-ime"
   "Name of the mac-ime input method.")
 
