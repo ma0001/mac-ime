@@ -85,6 +85,21 @@
     ;; Check if IME was restored
     (should (equal (mac-ime-internal-get-input-source) "com.apple.inputmethod.Kotoeri.RomajiTyping"))))
 
+(ert-deftest mac-ime-focus-change-test ()
+  "Test focus change handling."
+  (mac-ime-test-reset)
+  (mac-ime-enable)
+  (setq mac-ime--sync-paused t)
+  (setq mac-ime--expected-input-source "some-source")
+  
+  ;; Mock frame-focus-state to return t
+  (cl-letf (((symbol-function 'frame-focus-state) (lambda (&optional _frame) t)))
+    (funcall after-focus-change-function))
+  
+  (should-not mac-ime--sync-paused)
+  (should-not mac-ime--expected-input-source)
+  (mac-ime-disable))
+
 (ert-deftest mac-ime-auto-deactivate-functions-test ()
   "Test automatic IME deactivation for specific functions."
   (mac-ime-test-reset)

@@ -17,6 +17,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'nadvice)
 
 (defconst mac-ime-input-method "mac-ime"
   "Name of the mac-ime input method.")
@@ -334,7 +335,7 @@ Otherwise, deactivate IME."
       (dolist (func mac-ime-temporary-deactivate-functions)
         (mac-ime-temporary-deactivate func))
       (add-hook 'window-selection-change-functions #'mac-ime-update-state)
-      (add-hook 'focus-in-hook #'mac-ime--on-focus)
+      (add-function :after after-focus-change-function #'mac-ime--on-focus)
       (message "mac-ime enabled."))))
 
 ;;;###autoload
@@ -352,7 +353,7 @@ Otherwise, deactivate IME."
       (advice-remove func #'mac-ime--auto-deactivate-advice))
     (dolist (func mac-ime-temporary-deactivate-functions)
       (advice-remove func #'mac-ime--temporary-deactivate-advice))
-    (remove-hook 'focus-in-hook #'mac-ime--on-focus)
+    (remove-function after-focus-change-function #'mac-ime--on-focus)
     (remove-hook 'window-selection-change-functions #'mac-ime-update-state)
     (message "mac-ime disabled.")))
 
@@ -429,12 +430,13 @@ based on INPUT-SOURCE and `mac-ime-title-rules`."
       (force-mode-line-update))))
 
 (defun mac-ime--on-focus ()
-  "Handler for `focus-in-hook`.
+  "Handler for focus change.
 Resets sync state and synchronizes input method."
-  (mac-ime--debug 2 "mac-ime--on-focus called")
-  (setq mac-ime--sync-paused nil
-        mac-ime--expected-input-source nil)
-  (mac-ime--sync-input-method))
+  (when (frame-focus-state)
+    (mac-ime--debug 2 "mac-ime--on-focus called")
+    (setq mac-ime--sync-paused nil
+          mac-ime--expected-input-source nil)
+    (mac-ime--sync-input-method)))
 
 (defun mac-ime--sync-input-method ()
   "Synchronize `current-input-method` with the macOS input source."
