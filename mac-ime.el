@@ -209,7 +209,8 @@ The last input source will not be updated.")
   "Output a debug message if `mac-ime-debug-level` is >= LEVEL.
 FORMAT-STRING and ARGS are passed to `message`."
   (when (>= mac-ime-debug-level level)
-    (apply #'message (concat "mac-ime [DEBUG]: " format-string) args)))
+    (let ((timestamp (format-time-string "%M:%S.%3N")))
+      (apply #'message (concat (format "[%s] mac-ime [DEBUG]: " timestamp) format-string) args))))
 
 (defun mac-ime--get-ime-off-input-source ()
   "Return the input source ID to use to turn off IME.
@@ -323,8 +324,9 @@ off-source, others to on-source."
   (when (featurep 'mac-ime-module)
     (mac-ime-internal-poll #'mac-ime-handler)))
 
-(defun mac-ime-activate-input-method (_input-method)
+(defun mac-ime-activate-input-method (input-method)
   "Activate the mac-ime input method."
+  (mac-ime--debug 2 "mac-ime-activate-input-method called in %s buffer %s" input-method (current-buffer))
   (mac-ime-activate-ime)
   (setq deactivate-current-input-method-function #'mac-ime-deactivate-ime)
   (when-let ((source (mac-ime-get-input-source)))
@@ -498,10 +500,10 @@ Resets sync state and synchronizes input method."
           (let ((case-fold-search t))
             (if (string-match-p mac-ime-no-ime-input-source-regexp current-source)
                 (when (equal current-input-method mac-ime-input-method)
-                  (mac-ime--debug 2 "mac-ime--sync-input-method: deactivating input method (source: %s)" current-source)
+                  (mac-ime--debug 2 "mac-ime--sync-input-method: deactivating input method (source: %s buffer=%s)" current-source (current-buffer))
                   (deactivate-input-method))
               (unless (equal current-input-method mac-ime-input-method)
-                (mac-ime--debug 2 "mac-ime--sync-input-method: activating input method (source: %s)" current-source)
+                (mac-ime--debug 2 "mac-ime--sync-input-method: activating input method (source: %s) buffer=%s" current-source (current-buffer))
                 (activate-input-method mac-ime-input-method))
               (when (equal current-input-method mac-ime-input-method)
                 (mac-ime--update-title current-source)))))))))
@@ -512,7 +514,7 @@ Resets sync state and synchronizes input method."
 Uses `mac-ime--get-ime-on-input-source` to determine the input source."
   (interactive)
   (let ((source (mac-ime--get-ime-on-input-source)))
-    (mac-ime--debug 2 "mac-ime-activate-ime: source=%s" source)
+    (mac-ime--debug 2 "mac-ime-activate-ime: source=%s buffer=%s" source (current-buffer))
     (when source
       (mac-ime-set-input-source source)
       (setq mac-ime--sync-paused t
@@ -524,7 +526,7 @@ Uses `mac-ime--get-ime-on-input-source` to determine the input source."
 Uses `mac-ime--get-ime-off-input-source` to determine the input source."
   (interactive)
   (let ((source (mac-ime--get-ime-off-input-source)))
-    (mac-ime--debug 2 "mac-ime-deactivate-ime: source=%s" source)
+    (mac-ime--debug 2 "mac-ime-deactivate-ime: source=%s buffer=%s" source (current-buffer))
     (when source
       (mac-ime-set-input-source source)
       (setq mac-ime--sync-paused t
