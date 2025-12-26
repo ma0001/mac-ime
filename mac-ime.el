@@ -227,6 +227,7 @@ If that is also nil, find the first input source NOT matching
 
 (defun mac-ime--restore-input-source ()
   "Restore the saved input source."
+  (mac-ime--debug 2 "mac-ime--restore-input-source")
   (when mac-ime--saved-input-source
     (mac-ime-set-input-source mac-ime--saved-input-source)
     (setq mac-ime--saved-input-source nil))
@@ -389,18 +390,20 @@ Otherwise, deactivate IME."
 (defun mac-ime--auto-deactivate-advice (orig-fun &rest args)
   "Advice to deactivate IME before ORIG-FUN and restore it afterwards.
 ARGS are passed to ORIG-FUN."
-    (let ((saved-source (mac-ime-get-input-source))
-          (off-source (mac-ime--get-ime-off-input-source)))
-      (if (and (equal current-input-method mac-ime-input-method)
-               off-source saved-source (not (string= off-source saved-source)))
-          (progn
-            (setq mac-ime--ignore-input-source-change t)
-            (mac-ime-set-input-source off-source)
-            (unwind-protect
-                (apply orig-fun args)
-              (mac-ime-set-input-source saved-source)
-              (setq mac-ime--ignore-input-source-change nil)))
-        (apply orig-fun args))))
+  (mac-ime--debug 2 "mac-ime--auto-deactivate-advice called for %s" orig-fun)
+  (let ((saved-source (mac-ime-get-input-source))
+        (off-source (mac-ime--get-ime-off-input-source)))
+    (if (and (equal current-input-method mac-ime-input-method)
+             off-source saved-source (not (string= off-source saved-source)))
+        (progn
+          (setq mac-ime--ignore-input-source-change t)
+          (mac-ime-set-input-source off-source)
+          (unwind-protect
+              (apply orig-fun args)
+            (mac-ime--debug 2 "mac-ime--auto-deactivate-advice Restoring input source to %s" saved-source)
+            (mac-ime-set-input-source saved-source)
+            (setq mac-ime--ignore-input-source-change nil)))
+      (apply orig-fun args))))
 
 ;;;###autoload
 (defun mac-ime-auto-deactivate (func)
