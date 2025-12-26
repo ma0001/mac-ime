@@ -339,9 +339,10 @@ off-source, others to on-source."
 Activate IME if `current-input-method` is `mac-ime-input-method`.
 Otherwise, deactivate IME."
   (mac-ime--debug 2 "mac-ime-update-state: current-input-method=%s buffer=%s" current-input-method (current-buffer))
-  (if (equal current-input-method mac-ime-input-method)
-      (mac-ime-activate-ime)
-    (mac-ime-deactivate-ime)))
+  (unless mac-ime--ignore-input-source-change
+    (if (equal current-input-method mac-ime-input-method)
+        (mac-ime-activate-ime)
+      (mac-ime-deactivate-ime))))
 
 ;;;###autoload
 (defun mac-ime-enable ()
@@ -420,8 +421,7 @@ CONFIG is the configuration (symbol or cons)."
     (if should-deactivate
         (let ((saved-source (mac-ime-get-input-source))
               (off-source (mac-ime--get-ime-off-input-source)))
-          (if (and (equal current-input-method mac-ime-input-method)
-                   off-source saved-source (not (string= off-source saved-source)))
+          (if (and off-source saved-source)
               (progn
                 (setq mac-ime--ignore-input-source-change t)
                 (mac-ime-set-input-source off-source)

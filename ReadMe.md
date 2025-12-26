@@ -116,6 +116,25 @@ metaや、control以外のキーを使うようなキーでも制御したい場
 
 本モジュールではmacOSの入力ソースがRomanなのか日本語などの非Romanなのかを判定する必要があるためinput source IDを正規表現を使って判定を行っています。もし特殊なIMEを使っていてこの判断が正しく動作しない場合はmac-ime-no-ime-input-source-regexpで正しくRomanを判断できるように設定してください。現在使用可能なinput source IDは(mac-ime-get-input-source-list)で取得できます。
 
+## 暫定処理
+
+### minibufferのIMEがONになることがある
+
+日本語入力中にM-%で日本語の置換をした後にC-x bなどでminibaffer表示すると日本語入力の状態になる
+
+原因：
+
+minibufferで日本語入力すると、minibufferのcurrent-input-methodはmac-imeになる。
+この状態でread-from-minibufferがINHERIT-INPUT-METHOD nilで呼ばれると、バッファ移動前にmacのIMEを一旦英語入力とするが、
+その後にminibufferへの切り替えが発生する。
+その時window-selection-change-functions のフックでmac-ime-update-stateの処理でIMEがバッファに合わせて日本語入力になってしまう
+
+暫定対策：
+
+バッファが切り替わってからIMEを英語にしたいが難しい。
+mac-ime--ignore-input-source-changeが有効な間は、バッファ変更時のIME更新処理をしないようにする
+また、カレントバッファが英語の状態でminibufferに切り替わった時にも日本語に切り替わらないように、すでに英語の状態でも英語に切り替える処理を行いmac-ime--ignore-input-source-changeを有効にする
+
 
 ## 提供される関数
 
