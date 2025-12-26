@@ -139,9 +139,23 @@ If nil, `mac-ime-last-on-input-source` or the first input source NOT matching
                  (string :tag "Input Source ID"))
   :group 'mac-ime)
 
-(defcustom mac-ime-auto-deactivate-functions '(read-string read-char read-from-minibuffer y-or-n-p yes-or-no-p map-y-or-n-p)
-  "List of functions to automatically deactivate IME during execution."
-  :type '(repeat function)
+(defcustom mac-ime-auto-deactivate-functions '((read-string . 4)
+                                               (read-char . 1)
+                                               (read-event . 1)
+                                               (read-char-exclusive . 1)
+                                               (read-char-choice . 2)
+                                               (read-no-blanks-input . 2)
+                                               (read-from-minibuffer . 6)
+                                               (completing-read . 7)
+                                               y-or-n-p
+                                               yes-or-no-p
+                                               map-y-or-n-p)
+  "List of functions to automatically deactivate IME during execution.
+Each element can be a function symbol or a cons cell (FUNCTION . ARG-INDEX).
+If it is a cons cell, ARG-INDEX specifies the position of the INHERIT-INPUT-METHOD argument.
+If the argument is non-nil and the current input method is `mac-ime-input-method`,
+IME will remain active.  Otherwise, IME is deactivated."
+  :type '(repeat (choice function (cons function integer)))
   :group 'mac-ime)
 
 (defcustom mac-ime-temporary-deactivate-functions '(universal-argument--mode)
@@ -322,7 +336,7 @@ off-source, others to on-source."
   "Update IME state based on the current input method.
 Activate IME if `current-input-method` is `mac-ime-input-method`.
 Otherwise, deactivate IME."
-  (mac-ime--debug 2 "mac-ime-update-state: current-input-method=%s" current-input-method)
+  (mac-ime--debug 2 "mac-ime-update-state: current-input-method=%s buffer=%s" current-input-method (current-buffer))
   (if (equal current-input-method mac-ime-input-method)
       (mac-ime-activate-ime)
     (mac-ime-deactivate-ime)))
@@ -358,7 +372,9 @@ Otherwise, deactivate IME."
     (remove-hook 'mac-ime-functions #'mac-ime-deactivate-ime-on-prefix)
     (mac-ime-internal-stop)
     (dolist (func mac-ime-auto-deactivate-functions)
-      (advice-remove func #'mac-ime--auto-deactivate-advice))
+      (let* ((f-sym (if (consp func) (car func) func))
+             (advice-name (intern (format "mac-ime--auto-deactivate-%s" f-sym))))
+        (advice-remove f-sym advice-name)))
     (dolist (func mac-ime-temporary-deactivate-functions)
       (advice-remove func #'mac-ime--temporary-deactivate-advice))
     (remove-function after-focus-change-function #'mac-ime--on-focus)
@@ -387,29 +403,47 @@ Otherwise, deactivate IME."
   (when (featurep 'mac-ime-module)
     (mac-ime-internal-get-input-source-list)))
 
-(defun mac-ime--auto-deactivate-advice (orig-fun &rest args)
-  "Advice to deactivate IME before ORIG-FUN and restore it afterwards.
-ARGS are passed to ORIG-FUN."
-  (mac-ime--debug 2 "mac-ime--auto-deactivate-advice called for %s" orig-fun)
-  (let ((saved-source (mac-ime-get-input-source))
-        (off-source (mac-ime--get-ime-off-input-source)))
-    (if (and (equal current-input-method mac-ime-input-method)
-             off-source saved-source (not (string= off-source saved-source)))
-        (progn
-          (setq mac-ime--ignore-input-source-change t)
-          (mac-ime-set-input-source off-source)
-          (unwind-protect
-              (apply orig-fun args)
-            (mac-ime--debug 2 "mac-ime--auto-deactivate-advice Restoring input source to %s" saved-source)
-            (mac-ime-set-input-source saved-source)
-            (setq mac-ime--ignore-input-source-change nil)))
+(defun mac-ime--auto-deactivate-body (orig-fun args config)
+  "Body of the auto-deactivate advice.
+ORIG-FUN is the original function.
+ARGS are the arguments.
+CONFIG is the configuration (symbol or cons)."
+  (mac-ime--debug 2 "mac-ime--auto-deactivate-body called with config %s" config)
+  (let* ((inherit-index (if (consp config) (cdr config) nil))
+         (should-inherit (and inherit-index (nth inherit-index args)))
+         (should-deactivate
+          (if should-inherit
+              (not (equal current-input-method mac-ime-input-method))
+            t)))
+    (if should-deactivate
+        (let ((saved-source (mac-ime-get-input-source))
+              (off-source (mac-ime--get-ime-off-input-source)))
+          (if (and (equal current-input-method mac-ime-input-method)
+                   off-source saved-source (not (string= off-source saved-source)))
+              (progn
+                (setq mac-ime--ignore-input-source-change t)
+                (mac-ime-set-input-source off-source)
+                (unwind-protect
+                    (apply orig-fun args)
+                  (mac-ime--debug 2 "mac-ime--auto-deactivate-body Restoring input source to %s" saved-source)
+                  (mac-ime-set-input-source saved-source)
+                  (setq mac-ime--ignore-input-source-change nil)))
+            (apply orig-fun args)))
       (apply orig-fun args))))
 
 ;;;###autoload
 (defun mac-ime-auto-deactivate (func)
   "Add advice to FUNC to deactivate IME during its execution.
 The IME state is restored after FUNC completes."
-  (advice-add func :around #'mac-ime--auto-deactivate-advice))
+  (let* ((f-sym (if (consp func) (car func) func))
+         (advice-name (intern (format "mac-ime--auto-deactivate-%s" f-sym))))
+    (fset advice-name
+          (lambda (orig-fun &rest args)
+            (let ((current-config (cl-find f-sym mac-ime-auto-deactivate-functions
+                                           :test (lambda (f item)
+                                                   (eq f (if (consp item) (car item) item))))))
+              (mac-ime--auto-deactivate-body orig-fun args (or current-config f-sym)))))
+    (advice-add f-sym :around advice-name)))
 
 (defun mac-ime--temporary-deactivate-advice (&rest _args)
   "Advice to deactivate IME temporarily."

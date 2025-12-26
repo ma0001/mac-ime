@@ -22,5 +22,7 @@ test: $(OBJ)
 	emacs -Q -batch -L . -L test -l test/mac-ime-mock-test.el -f ert-run-tests-batch-and-exit
 	@echo "Running Integration Tests..."
 	emacs -Q -batch -L . -L test -l test/mac-ime-integration-test.el -f ert-run-tests-batch-and-exit
+	@echo "Running inherit Tests..."
+	emacs -Q -batch -L . -L test -l test/mac-ime-inherit-test.el -f ert-run-tests-batch-and-exit
 
 .PHONY: all clean test

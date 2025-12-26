@@ -90,14 +90,24 @@ metaや、control以外のキーを使うようなキーでも制御したい場
 
 ### ミニバッファ入力時のIMEオフ
 
-ミニバッファへの入力時にRoman入力となり入力後に元に戻すようにするため、mac-ime-auto-deactivate-functionsに指定してある関数では、関数実行前にRoman入力とし関数実行後に戻す処理を追加しています。mac-ime-auto-deactivate-functionsの設定を変更することにより動作させる関数を変えることができます。
+ミニバッファへの入力時にRoman入力となり入力後に元に戻すようにするため、`mac-ime-auto-deactivate-functions` に指定してある関数では、関数実行前にRoman入力とし関数実行後に戻す処理を追加しています。
 
-デフォルトで設定している関数は
-- read-string
-- read-char
-- read-from-minibuffer
-- y-or-n-p yes-or-no-p
-- map-y-or-n-p
+デフォルトで設定している関数は以下の通りです。
+
+- `read-string`
+- `read-char`
+- `read-event`
+- `read-char-exclusive`
+- `read-char-choice`
+- `read-no-blanks-input`
+- `read-from-minibuffer`
+- `completing-read`
+- `y-or-n-p`
+- `yes-or-no-p`
+- `map-y-or-n-p`
+
+また、`read-string` や `read-from-minibuffer` などの `inherit-input-method` 引数を持つ関数については、その引数が non-nil の場合はバッファのinput-methodが"mac-ime"かを確認し、その場合のみmacのIMEをオンするように制御しています。
+設定を変更する場合は、関数シンボルのみ、または `(関数シンボル . inherit-input-methodの引数インデックス)` の形式で指定します。
 
 
 また、C-uのようにコマンド実行後のキーでRoman入力として次のコマンド実行前に戻す必要があるものについては、変数mac-ime-temporary-deactivate-functionsに指定しています。（universal-argumentではC-u後の最初のキー入力しかRomanとならないため、その後の数字入力で繰り返し呼ばれるuniversal-argument--modeを登録しています）
