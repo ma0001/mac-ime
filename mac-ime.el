@@ -283,8 +283,8 @@ MODIFIERS is the modifier flags."
         (module-load mac-ime-module-path)
       (message "mac-ime: Module not found at %s." mac-ime-module-path))))
 
-(defvar mac-ime--last-buffer nil
-  "The buffer that was current during the last poll.")
+(defvar mac-ime--last-selected-buffer nil
+  "The buffer that was current during the last window selection change.")
 
 (defun mac-ime-handler (keycode modifiers)
   "Internal handler called by the C module.
@@ -296,7 +296,7 @@ MODIFIERS is the modifier flags."
   ;; Skip synchronization if the buffer has changed recently.
   ;; This prevents race conditions where the poll runs before window-selection-change-functions.
   (let ((current (current-buffer)))
-    (when (eq current mac-ime--last-buffer)
+    (when (eq current mac-ime--last-selected-buffer)
       (mac-ime--check-input-source-change)
       (mac-ime--sync-input-method))))
   
@@ -337,7 +337,7 @@ off-source, others to on-source."
 Activate IME if `current-input-method` is `mac-ime-input-method`.
 Otherwise, deactivate IME."
   (mac-ime--debug 2 "mac-ime-update-state: current-input-method=%s buffer=%s" current-input-method (current-buffer))
-  (setq mac-ime--last-buffer (current-buffer))
+  (setq mac-ime--last-selected-buffer (current-buffer))
   (unless mac-ime--ignore-input-source-change
     (if (equal current-input-method mac-ime-input-method)
         (mac-ime-activate-ime)
