@@ -296,11 +296,9 @@ MODIFIERS is the modifier flags."
   ;; Skip synchronization if the buffer has changed recently.
   ;; This prevents race conditions where the poll runs before window-selection-change-functions.
   (let ((current (current-buffer)))
-    (if (eq current mac-ime--last-buffer)
-        (progn
-          (mac-ime--check-input-source-change)
-          (mac-ime--sync-input-method))
-      (setq mac-ime--last-buffer current))))
+    (when (eq current mac-ime--last-buffer)
+      (mac-ime--check-input-source-change)
+      (mac-ime--sync-input-method))))
   
 
 (defun mac-ime--check-input-source-change ()
@@ -339,6 +337,7 @@ off-source, others to on-source."
 Activate IME if `current-input-method` is `mac-ime-input-method`.
 Otherwise, deactivate IME."
   (mac-ime--debug 2 "mac-ime-update-state: current-input-method=%s buffer=%s" current-input-method (current-buffer))
+  (setq mac-ime--last-buffer (current-buffer))
   (unless mac-ime--ignore-input-source-change
     (if (equal current-input-method mac-ime-input-method)
         (mac-ime-activate-ime)
