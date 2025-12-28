@@ -152,9 +152,10 @@ If nil, `mac-ime-last-on-input-source` or the first input source NOT matching
                                                map-y-or-n-p)
   "List of functions to automatically deactivate IME during execution.
 Each element can be a function symbol or a cons cell (FUNCTION . ARG-INDEX).
-If it is a cons cell, ARG-INDEX specifies the position of the INHERIT-INPUT-METHOD argument.
-If the argument is non-nil and the current input method is `mac-ime-input-method`,
-IME will remain active.  Otherwise, IME is deactivated."
+If it is a cons cell, ARG-INDEX specifies the position of the
+INHERIT-INPUT-METHOD argument.
+If the argument is non-nil and the current input method is
+`mac-ime-input-method`, IME will remain active.  Otherwise, IME is deactivated."
   :type '(repeat (choice function (cons function integer)))
   :group 'mac-ime)
 
@@ -323,7 +324,8 @@ off-source, others to on-source."
     (mac-ime-internal-poll #'mac-ime-handler)))
 
 (defun mac-ime-activate-input-method (input-method)
-  "Activate the mac-ime input method."
+  "Activate the mac-ime input method.
+INPUT-METHOD is the name of the input method to activate."
   (mac-ime--debug 2 "mac-ime-activate-input-method called in %s buffer %s" input-method (current-buffer))
   (mac-ime-activate-ime)
   (setq deactivate-current-input-method-function #'mac-ime-deactivate-ime)
