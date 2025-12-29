@@ -282,7 +282,7 @@ MODIFIERS is the modifier flags."
   (unless (featurep 'mac-ime-module)
     (if (file-exists-p mac-ime-module-path)
         (module-load mac-ime-module-path)
-      (message "mac-ime: Module not found at %s." mac-ime-module-path))))
+      (error "mac-ime: Module not found at %s" mac-ime-module-path))))
 
 (defvar mac-ime--last-selected-buffer nil
   "The buffer that was current during the last window selection change.")
