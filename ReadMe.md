@@ -127,6 +127,17 @@ minibufferで日本語入力すると、minibufferのcurrent-input-methodはmac-
 mac-ime--ignore-input-source-changeが有効な間は、バッファ変更時のIME更新処理をしないようにする
 また、カレントバッファが英語の状態でminibufferに切り替わった時にも日本語に切り替わらないように、すでに英語の状態でも英語に切り替える処理を行いmac-ime--ignore-input-source-changeを有効にする
 
+## BUGS
+
+### C-x C-x 後すぐにIME状態が復帰しない
+
+C-x C-xのようにキーバインドの最後がプリフィックスキーの場合、コマンド実施後に再度IMEオフ状態になってしまします。
+
+原因：
+
+キーイベントをポーリングで処理しているため、プリフィックスキーの処理がどうしても遅れてしまいます。C-x C-x(exchange-point-and-mark)の実行後に最後のプリフィックスキーをコマンド実行後のプリフィックスキー入力と認識してしまいIMEをオフにしてしまいます。
+
+
 
 ## 提供される関数
 
