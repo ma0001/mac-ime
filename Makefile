@@ -2,6 +2,7 @@
 CC = clang
 CFLAGS = -Wall -O2 -fPIC -fobjc-arc
 LDFLAGS = -dynamiclib -framework Cocoa -framework Carbon
+ARCH_FLAGS = -arch x86_64 -arch arm64
 
 # Include path for emacs-module.h
 CFLAGS += -I./src -I./src/emacs-27.1
@@ -12,7 +13,7 @@ OBJ = mac-ime-module.so
 all: $(OBJ)
 
 $(OBJ): $(SRC)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $<
+	$(CC) $(ARCH_FLAGS) $(CFLAGS) $(LDFLAGS) -o $@ $<
 
 clean:
 	rm -f $(OBJ)
